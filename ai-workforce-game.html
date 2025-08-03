@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Workforce Mastery Game</title>
+    <meta name="description" content="Interactive learning game for AI workforce concepts with professional certification system">
+    <meta name="keywords" content="AI, workforce, learning, certification, prompt engineering, context engineering">
+    <meta property="og:title" content="AI Workforce Mastery Game">
+    <meta property="og:description" content="Master AI workforce concepts and earn professional certification">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://joshuamtm.github.io/ai-workforce-learning-game/">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: min(90vw, 800px);
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .welcome-screen {
+            text-align: center;
+        }
+
+        .welcome-screen h2 {
+            color: #4facfe;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-screen p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            color: #666;
+        }
+
+        .mode-buttons {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .mode-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1.5rem;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .mode-btn h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .mode-btn p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .quiz-screen {
+            max-width: 100%;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .quiz-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .score-display {
+            font-weight: 600;
+            color: #4facfe;
+        }
+
+        .certification-target {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .question-container {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .question-number {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        .answers {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .answer-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .answer-btn:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .answer-btn.selected {
+            border-color: #4facfe;
+            background: #4facfe;
+            color: white;
+        }
+
+        .answer-btn.correct {
+            border-color: #28a745;
+            background: #28a745;
+            color: white;
+        }
+
+        .answer-btn.incorrect {
+            border-color: #dc3545;
+            background: #dc3545;
+            color: white;
+        }
+
+        .answer-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .feedback {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .feedback.correct {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .feedback.incorrect {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .feedback h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .feedback p {
+            line-height: 1.5;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-screen {
+            text-align: center;
+        }
+
+        .results-screen h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .results-screen.passed h2 {
+            color: #28a745;
+        }
+
+        .results-screen.failed h2 {
+            color: #dc3545;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem auto;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .score-circle.passed {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .score-circle.failed {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .certificate-section {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+        }
+
+        .name-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .name-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .certificate {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            border: 5px solid #4facfe;
+            padding: 3rem;
+            margin: 2rem 0;
+            text-align: center;
+            position: relative;
+            border-radius: 15px;
+        }
+
+        .certificate::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 2px solid #764ba2;
+            border-radius: 10px;
+        }
+
+        .certificate h3 {
+            font-size: 2.5rem;
+            color: #4facfe;
+            margin-bottom: 1rem;
+        }
+
+        .certificate h4 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+
+        .certificate .name {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #764ba2;
+            margin: 1rem 0;
+            text-decoration: underline;
+        }
+
+        .certificate .details {
+            font-size: 1.1rem;
+            color: #666;
+            margin: 1rem 0;
+        }
+
+        .certificate .date {
+            font-size: 1rem;
+            color: #999;
+            margin-top: 2rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            width: min(90vw, 500px);
+            padding: 2rem;
+            border-radius: 15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .close {
+            float: right;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .game-container {
+                margin: 1rem;
+                width: calc(100vw - 2rem);
+            }
+            
+            .content {
+                padding: 1rem;
+            }
+            
+            .quiz-info {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>AI Workforce Mastery</h1>
+            <p>Master the Future of Work with AI</p>
+        </div>
+
+        <div class="content">
+            <!-- Welcome Screen -->
+            <div class="screen active" id="welcome-screen">
+                <div class="welcome-screen">
+                    <h2>Welcome to AI Workforce Mastery!</h2>
+                    <p>Master essential AI concepts that are reshaping the modern workplace. Learn about prompt engineering, context engineering, AI's impact on jobs, and become certified in AI workforce knowledge.</p>
+                    
+                    <div class="mode-buttons">
+                        <button class="mode-btn" onclick="startMode('quiz')">
+                            <h3>🎯 Certification Quiz</h3>
+                            <p>Take the comprehensive quiz to earn your AI Workforce Mastery Professional Certificate. Requires 80% to pass.</p>
+                        </button>
+                        
+                        <button class="mode-btn" onclick="startMode('scenarios')">
+                            <h3>💼 Workplace Scenarios</h3>
+                            <p>Practice applying AI concepts in realistic workplace situations and decision-making challenges.</p>
+                        </button>
+                        
+                        <button class="mode-btn" onclick="startMode('challenges')">
+                            <h3>⚡ Technical Challenges</h3>
+                            <p>Hands-on challenges to practice AI workflows, prompt engineering, and technical implementation.</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div class="screen" id="quiz-screen">
+                <div class="quiz-screen">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    
+                    <div class="quiz-info">
+                        <div class="score-display">
+                            Score: <span id="current-score">0</span>/50 (<span id="current-percentage">0</span>%)
+                        </div>
+                        <div class="certification-target">
+                            Need 80% (40/50) for certification
+                        </div>
+                        <div>
+                            Attempt: <span id="attempt-number">1</span>
+                        </div>
+                    </div>
+                    
+                    <div class="question-container">
+                        <div class="question-number" id="question-number">Question 1 of 50</div>
+                        <div class="question-text" id="question-text"></div>
+                        
+                        <div class="answers" id="answers"></div>
+                        
+                        <div class="feedback" id="feedback"></div>
+                    </div>
+                    
+                    <div class="nav-buttons">
+                        <button class="btn btn-secondary" onclick="goHome()">Home</button>
+                        <div>
+                            <button class="btn btn-secondary" onclick="restartQuiz()" id="restart-btn">Restart Quiz</button>
+                            <button class="btn btn-primary" onclick="nextQuestion()" id="next-btn" disabled>Next Question</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div class="screen" id="results-screen">
+                <div class="results-screen">
+                    <h2 id="results-title"></h2>
+                    
+                    <div class="score-circle" id="score-circle">
+                        <span id="final-score"></span>
+                    </div>
+                    
+                    <div id="results-message"></div>
+                    
+                    <div class="certificate-section" id="certificate-section" style="display: none;">
+                        <h3>🎉 Congratulations! You've earned your certificate!</h3>
+                        <p>Enter your name to generate your professional certificate:</p>
+                        <input type="text" class="name-input" id="certificate-name" placeholder="Enter your first name or preferred name">
+                        <button class="btn btn-success" onclick="generateCertificate()">Generate Certificate</button>
+                    </div>
+                    
+                    <div id="certificate-display" style="display: none;"></div>
+                    
+                    <div class="nav-buttons" style="justify-content: center; margin-top: 2rem;">
+                        <button class="btn btn-primary" onclick="retakeQuiz()" id="retake-btn">Retake Quiz</button>
+                        <button class="btn btn-secondary" onclick="goHome()">Back to Home</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenarios Screen (Placeholder) -->
+            <div class="screen" id="scenarios-screen">
+                <div style="text-align: center; padding: 3rem;">
+                    <h2>🚧 Coming Soon!</h2>
+                    <p>Workplace scenarios are being developed. Focus on the certification quiz for now!</p>
+                    <button class="btn btn-primary" onclick="goHome()" style="margin-top: 2rem;">Back to Home</button>
+                </div>
+            </div>
+
+            <!-- Challenges Screen (Placeholder) -->
+            <div class="screen" id="challenges-screen">
+                <div style="text-align: center; padding: 3rem;">
+                    <h2>🚧 Coming Soon!</h2>
+                    <p>Technical challenges are being developed. Focus on the certification quiz for now!</p>
+                    <button class="btn btn-primary" onclick="goHome()" style="margin-top: 2rem;">Back to Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let currentQuestion = 0;
+        let score = 0;
+        let questions = [];
+        let userAnswers = [];
+        let attemptNumber = 1;
+        let quizCompleted = false;
+
+        // Initialize the game
+        function init() {
+            loadQuestions();
+            showScreen('welcome-screen');
+        }
+
+        // Screen navigation
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goHome() {
+            showScreen('welcome-screen');
+            resetQuiz();
+        }
+
+        function startMode(mode) {
+            if (mode === 'quiz') {
+                startQuiz();
+            } else if (mode === 'scenarios') {
+                showScreen('scenarios-screen');
+            } else if (mode === 'challenges') {
+                showScreen('challenges-screen');
+            }
+        }
+
+        // Quiz functions
+        function startQuiz() {
+            resetQuiz();
+            showScreen('quiz-screen');
+            displayQuestion();
+        }
+
+        function resetQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            userAnswers = [];
+            quizCompleted = false;
+            updateProgress();
+            updateScore();
+        }
+
+        function restartQuiz() {
+            if (confirm('Are you sure you want to restart the quiz? Your current progress will be lost.')) {
+                attemptNumber++;
+                document.getElementById('attempt-number').textContent = attemptNumber;
+                startQuiz();
+            }
+        }
+
+        function retakeQuiz() {
+            attemptNumber++;
+            document.getElementById('attempt-number').textContent = attemptNumber;
+            startQuiz();
+        }
+
+        function updateProgress() {
+            const progress = (currentQuestion / questions.length) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('question-number').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+        }
+
+        function updateScore() {
+            document.getElementById('current-score').textContent = score;
+            const percentage = Math.round((score / questions.length) * 100);
+            document.getElementById('current-percentage').textContent = percentage;
+        }
+
+        function displayQuestion() {
+            if (currentQuestion >= questions.length) {
+                showResults();
+                return;
+            }
+
+            const question = questions[currentQuestion];
+            document.getElementById('question-text').textContent = question.question;
+            
+            const answersContainer = document.getElementById('answers');
+            answersContainer.innerHTML = '';
+            
+            question.answers.forEach((answer, index) => {
+                const button = document.createElement('button');
+                button.className = 'answer-btn';
+                button.textContent = `${String.fromCharCode(65 + index)}. ${answer}`;
+                button.onclick = () => selectAnswer(index);
+                answersContainer.appendChild(button);
+            });
+
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('next-btn').disabled = true;
+            updateProgress();
+        }
+
+        function selectAnswer(selectedIndex) {
+            const question = questions[currentQuestion];
+            const answerButtons = document.querySelectorAll('.answer-btn');
+            
+            // Disable all buttons
+            answerButtons.forEach(btn => btn.disabled = true);
+            
+            // Show correct/incorrect styling
+            answerButtons.forEach((btn, index) => {
+                if (index === question.correct) {
+                    btn.classList.add('correct');
+                } else if (index === selectedIndex && index !== question.correct) {
+                    btn.classList.add('incorrect');
+                } else if (index === selectedIndex) {
+                    btn.classList.add('selected');
+                }
+            });
+
+            // Record answer and update score
+            userAnswers[currentQuestion] = selectedIndex;
+            const isCorrect = selectedIndex === question.correct;
+            
+            if (isCorrect) {
+                score++;
+                updateScore();
+            }
+
+            // Show feedback
+            showFeedback(isCorrect, question);
+            
+            // Enable next button
+            document.getElementById('next-btn').disabled = false;
+            
+            // Change button text for last question
+            if (currentQuestion === questions.length - 1) {
+                document.getElementById('next-btn').textContent = 'Finish Quiz';
+            }
+        }
+
+        function showFeedback(isCorrect, question) {
+            const feedback = document.getElementById('feedback');
+            feedback.style.display = 'block';
+            feedback.className = 'feedback ' + (isCorrect ? 'correct' : 'incorrect');
+            
+            if (isCorrect) {
+                feedback.innerHTML = '<h4>✅ Correct!</h4><p>' + question.explanation + '</p>';
+            } else {
+                const correctLetter = String.fromCharCode(65 + question.correct);
+                const correctAnswer = question.answers[question.correct];
+                feedback.innerHTML = `
+                    <h4>❌ Incorrect</h4>
+                    <p><strong>Correct answer:</strong> ${correctLetter}. ${correctAnswer}</p>
+                    <p><strong>Explanation:</strong> ${question.explanation}</p>
+                `;
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion >= questions.length) {
+                showResults();
+            } else {
+                displayQuestion();
+                document.getElementById('next-btn').textContent = 'Next Question';
+            }
+        }
+
+        function showResults() {
+            quizCompleted = true;
+            const percentage = Math.round((score / questions.length) * 100);
+            const passed = percentage >= 80;
+            
+            showScreen('results-screen');
+            
+            const resultsScreen = document.getElementById('results-screen').querySelector('.results-screen');
+            const scoreCircle = document.getElementById('score-circle');
+            const finalScore = document.getElementById('final-score');
+            const resultsTitle = document.getElementById('results-title');
+            const resultsMessage = document.getElementById('results-message');
+            const certificateSection = document.getElementById('certificate-section');
+            
+            resultsScreen.className = 'results-screen ' + (passed ? 'passed' : 'failed');
+            scoreCircle.className = 'score-circle ' + (passed ? 'passed' : 'failed');
+            
+            finalScore.textContent = percentage + '%';
+            
+            if (passed) {
+                resultsTitle.textContent = '🎉 Congratulations!';
+                resultsMessage.innerHTML = `
+                    <p style="font-size: 1.2rem; margin-bottom: 1rem;">You passed the AI Workforce Mastery Quiz!</p>
+                    <p>Score: ${score}/${questions.length} (${percentage}%)</p>
+                    <p>You've demonstrated mastery of AI workforce concepts and are eligible for certification.</p>
+                `;
+                certificateSection.style.display = 'block';
+            } else {
+                resultsTitle.textContent = '📚 Keep Learning!';
+                resultsMessage.innerHTML = `
+                    <p style="font-size: 1.2rem; margin-bottom: 1rem;">You need 80% to pass (${score}/${questions.length} = ${percentage}%)</p>
+                    <p>Don't worry! You can retake the quiz unlimited times.</p>
+                    <p>Review the feedback from your answers and try again when you're ready.</p>
+                `;
+                certificateSection.style.display = 'none';
+            }
+        }
+
+        function generateCertificate() {
+            const name = document.getElementById('certificate-name').value.trim();
+            if (!name) {
+                alert('Please enter your name for the certificate.');
+                return;
+            }
+
+            const certificateHtml = `
+                <div class="certificate">
+                    <h3>Certificate of Achievement</h3>
+                    <h4>AI Workforce Mastery Professional</h4>
+                    <p>This certifies that</p>
+                    <div class="name">${name}</div>
+                    <p>has successfully completed the AI Workforce Mastery assessment</p>
+                    <div class="details">
+                        <p>Score: ${score}/50 (${Math.round((score / questions.length) * 100)}%)</p>
+                        <p>Certification Requirements: 80% minimum achieved</p>
+                        <p>Certificate ID: AI-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+                    </div>
+                    <div class="date">
+                        Issued on ${new Date().toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })}
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="btn btn-success" onclick="downloadCertificate()">Download Certificate</button>
+                    <button class="btn btn-primary" onclick="shareCertificate()">Share Achievement</button>
+                </div>
+            `;
+            
+            document.getElementById('certificate-display').innerHTML = certificateHtml;
+            document.getElementById('certificate-display').style.display = 'block';
+            document.getElementById('certificate-section').style.display = 'none';
+        }
+
+        function downloadCertificate() {
+            // Simple download simulation - in real implementation would generate PDF
+            alert('Certificate download feature would generate a PDF certificate here!');
+        }
+
+        function shareCertificate() {
+            const name = document.getElementById('certificate-name').value;
+            const shareText = `🎉 I just earned my AI Workforce Mastery Professional Certificate! Scored ${Math.round((score / questions.length) * 100)}% on the comprehensive AI workforce assessment. #AIWorkforce #Certification #ProfessionalDevelopment`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'AI Workforce Mastery Certificate',
+                    text: shareText,
+                });
+            } else {
+                // Fallback - copy to clipboard
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('Achievement text copied to clipboard!');
+                });
+            }
+        }
+
+        // Load all 50 questions from the study guide
+        function loadQuestions() {
+            questions = [
+                {
+                    question: "What is the primary difference between 'prompt engineering' and 'context engineering'?",
+                    answers: [
+                        "Prompt engineering is for simple chatbot interactions, while context engineering designs dynamic systems for complex AI applications",
+                        "Context engineering is older and less sophisticated than prompt engineering",
+                        "They are essentially the same thing with different names",
+                        "Prompt engineering is only for technical users, context engineering is for business users"
+                    ],
+                    correct: 0,
+                    explanation: "Prompt engineering typically involves crafting effective prompts for simple chatbot interactions (e.g., asking ChatGPT about running shoes). Context engineering, on the other hand, is about designing and building dynamic systems that provide an LLM with the right information in the right format at the right time for complex AI applications like AI agents, where prompts become larger and more structured."
+                },
+                {
+                    question: "What does the 'execution getting cheaper' dynamic in AI refer to and how does it relate to job displacement?",
+                    answers: [
+                        "AI hardware costs are decreasing, making AI more accessible to small businesses",
+                        "AI can automate and accelerate tasks traditionally performed by humans, potentially reducing need for execution-focused roles",
+                        "Software licenses for AI tools are becoming more affordable over time",
+                        "Training AI models requires less computational power, reducing infrastructure costs"
+                    ],
+                    correct: 1,
+                    explanation: "The 'execution getting cheaper' dynamic means AI can automate and accelerate tasks traditionally performed by humans, such as prompt engineering for PMs, code generation for engineers, or basic customer success functions. This leads to expectations of higher output with less manual effort, potentially reducing the need for certain types of execution-focused roles."
+                },
+                {
+                    question: "What are the 'quality and security nightmares' created by AI and why do they create new job opportunities?",
+                    answers: [
+                        "AI systems are prone to cyberattacks, creating demand for cybersecurity specialists",
+                        "Rapid generation of 'vibe coded' AI content with security flaws and quality issues creates demand for AI security and quality assurance roles", 
+                        "AI models are difficult to train properly, requiring more machine learning engineers",
+                        "AI systems consume too much energy, creating demand for green technology specialists"
+                    ],
+                    correct: 1,
+                    explanation: "The 'quality and security nightmares' dynamic arises from the rapid generation of 'vibe coded' (AI-generated) content, which often contains security flaws, quality issues, or hallucinations. This creates a demand for new jobs focused on AI security (e.g., red teaming, prompt injection defense) and quality assurance to trace and fix errors, as well as ensure the reliability of AI outputs."
+                },
+                {
+                    question: "Why are 'compute costs exploding' and what kinds of jobs emerge as a result?",
+                    answers: [
+                        "Cloud storage costs are increasing due to data volume growth",
+                        "Massive infrastructure required for AI models, especially GPUs, creates jobs in infrastructure management and cost optimization",
+                        "Internet bandwidth costs are rising due to increased AI traffic",
+                        "Software licensing costs are increasing as AI tools become more sophisticated"
+                    ],
+                    correct: 1,
+                    explanation: "Compute costs are exploding due to the massive infrastructure required to train and run large AI models, particularly the expense of GPUs. This dynamic creates a 'forest of downstream jobs' in areas like infrastructure management, cost tuning, and cloud AI infrastructure engineering, as organizations need experts to optimize and manage these increasingly expensive resources."
+                },
+                {
+                    question: "What is the 'human AI boundary crisis' and how does it lead to new roles?",
+                    answers: [
+                        "Legal disputes over AI intellectual property rights",
+                        "Confusion and lack of established norms for human-AI interaction, creating needs for UX design and human-AI interface roles",
+                        "Ethical concerns about AI replacing human workers entirely",
+                        "Technical limitations preventing AI from understanding human emotions"
+                    ],
+                    correct: 1,
+                    explanation: "The 'human AI boundary crisis' refers to the confusion and lack of established norms for interaction between humans and AI systems. This tension creates a need for roles focused on understanding and debugging vague human terms (like 'hallucinating AI'), designing intuitive human-AI interfaces, and building trust in AI interactions, leading to opportunities in UX, human-AI interaction design, and even AI psychology."
+                },
+                {
+                    question: "How can Product Managers add value in the age of AI, despite automation?",
+                    answers: [
+                        "By learning to code and becoming technical product managers",
+                        "By scaling their ability to manage AI agents, becoming more technical, and figuring out how to scale trust amidst AI chaos",
+                        "By focusing only on non-technical product features that AI cannot handle",
+                        "By managing larger teams of human workers to compete with AI efficiency"
+                    ],
+                    correct: 1,
+                    explanation: "Product Managers can add value by scaling their ability to manage AI agents, becoming more technical, and crucially, by figuring out how to scale trust amidst the chaos created by AI. They need to filter ideas from 'vibe code,' articulate technical paths forward, and deliver quality models in production, leveraging AI to multiply their opportunity to earn trust and manage organizational chaos."
+                },
+                {
+                    question: "Why will Customer Success roles likely persist despite AI's ability to automate ticketing?",
+                    answers: [
+                        "Customer Success professionals type faster than AI systems",
+                        "Their core value lies in holding relationships, which is a fundamentally human skill that LLMs cannot replicate",
+                        "AI cannot understand complex customer problems yet",
+                        "Customers prefer human interaction over AI in all circumstances"
+                    ],
+                    correct: 1,
+                    explanation: "Customer Success roles will likely persist because their core value lies in holding relationships, which is a fundamentally human skill that LLMs cannot replicate. While AI can automate ticket answering, the ability of a customer success professional to advocate aggressively for the customer internally and discuss expansion revenue is rooted in relationship management, extending customer lifetime."
+                },
+                {
+                    question: "What is the main challenge the 'AI Talent Assessment Playbook' aims to address?",
+                    answers: [
+                        "Lack of AI education in universities",
+                        "The 'performance theater problem' where employees pretend to use AI effectively without measurable changes in output",
+                        "Shortage of qualified AI engineers in the job market",
+                        "High costs of AI training programs for employees"
+                    ],
+                    correct: 1,
+                    explanation: "The 'AI Talent Assessment Playbook' aims to address the 'performance theater problem,' where employees pretend to use AI effectively without actual measurable changes in output or cycle times. It seeks to eliminate superficial evaluations and provide a practical framework for measuring real AI proficiency based on actual execution capability in core job functions."
+                },
+                {
+                    question: "What is 'motion-based assessment' as proposed in the AI talent evaluation framework?",
+                    answers: [
+                        "Evaluating how fast employees can operate AI interfaces",
+                        "A framework that evaluates AI proficiency by measuring ability to incorporate AI into core job functions that drive business value",
+                        "Assessment based on physical movement and ergonomics when using AI tools",
+                        "Testing employees' ability to multitask with multiple AI applications"
+                    ],
+                    correct: 1,
+                    explanation: "Motion-based assessment is a framework that evaluates an individual's or team's AI proficiency by measuring their ability to incorporate AI into 'core motions' or fundamental tasks that drive business value for their specific job family. Instead of general AI knowledge, it focuses on how effectively AI is used to accelerate and enhance real-world job functions."
+                },
+                {
+                    question: "Which of the following is one of the six proven AI workflow patterns for developers?",
+                    answers: [
+                        "Codebase Mapping and Onboarding - using AI to quickly understand existing codebases",
+                        "Database Optimization and Scaling",
+                        "User Interface Design and Prototyping",
+                        "Network Security and Monitoring"
+                    ],
+                    correct: 0,
+                    explanation: "One proven AI workflow pattern is Codebase Mapping and Onboarding. This involves using AI to quickly understand existing codebases by generating summaries, maps, or graphs. For example, a new engineer can point AI at a repository to rapidly gain high-level context, accelerating their onboarding process, and even non-engineers can use it to understand technical patterns."
+                },
+                {
+                    question: "What is an AI Agent in the context of workforce applications?",
+                    answers: [
+                        "A human employee who specializes in AI tool usage",
+                        "A software system that uses AI to pursue goals and complete tasks on behalf of users, often incorporating multiple AI components",
+                        "A management role responsible for overseeing AI implementation",
+                        "A consultant who helps companies adopt AI technologies"
+                    ],
+                    correct: 1,
+                    explanation: "An AI Agent is a software system that uses Artificial Intelligence to pursue goals and complete tasks on behalf of users, often incorporating multiple AI components and tools. These agents can operate autonomously to achieve specified objectives."
+                },
+                {
+                    question: "What is 'AI Washing' in the business context?",
+                    answers: [
+                        "The process of cleaning training data for AI models",
+                        "The superficial act of marketing existing services as AI-enabled without genuine AI integration",
+                        "A method for removing bias from AI algorithms",
+                        "The practice of regularly updating AI model weights"
+                    ],
+                    correct: 1,
+                    explanation: "AI Washing is the superficial act of marketing or rebranding existing services or products as AI-enabled without genuinely integrating significant AI capabilities or expertise. It's similar to 'greenwashing' but applied to AI technology claims."
+                },
+                {
+                    question: "What is Context Engineering in practical terms?",
+                    answers: [
+                        "Designing office environments optimized for AI tool usage",
+                        "The process of designing dynamic systems that give LLMs the right information in the right format at the right time",
+                        "Creating user interfaces that adapt to different contexts",
+                        "Engineering solutions for context-aware mobile applications"
+                    ],
+                    correct: 1,
+                    explanation: "Context Engineering is the process of designing and building dynamic systems that give a Large Language Model (LLM) the right information in the right format at the right time to accomplish a task. It involves carefully crafting complex, structured inputs for AI applications like agents."
+                },
+                {
+                    question: "What are 'Hallucinations' in AI systems?",
+                    answers: [
+                        "Visual artifacts in AI-generated images",
+                        "Instances where AI models generate inaccurate, nonsensical, or fabricated information",
+                        "Audio distortions in AI-generated speech",
+                        "Unexpected behaviors in AI robot systems"
+                    ],
+                    correct: 1,
+                    explanation: "Hallucinations in AI refer to instances where an AI model generates inaccurate, nonsensical, or fabricated information, often due to poor data chunking or an inability to constrain responses appropriately."
+                },
+                {
+                    question: "What is RAG (Retrieval Augmented Generation)?",
+                    answers: [
+                        "A method for compressing large AI models",
+                        "An AI technique that allows LLMs to retrieve information from external databases to improve response accuracy",
+                        "A programming framework for building AI applications",
+                        "A security protocol for protecting AI model weights"
+                    ],
+                    correct: 1,
+                    explanation: "RAG (Retrieval Augmented Generation) is an AI technique that allows LLMs to retrieve information from external databases or documents to improve the accuracy and relevance of their generated responses."
+                },
+                {
+                    question: "What is the role of 'Guardrails' in AI Agent systems?",
+                    answers: [
+                        "Physical barriers to prevent AI hardware damage",
+                        "Safety mechanisms implemented to ensure proper AI behavior and prevent harmful outputs",
+                        "Legal regulations governing AI development",
+                        "Budget constraints on AI compute spending"
+                    ],
+                    correct: 1,
+                    explanation: "Guardrails are safety mechanisms implemented in AI agents to ensure proper behavior and prevent undesirable or harmful outputs (e.g., preventing a customer service AI from using inappropriate language)."
+                },
+                {
+                    question: "What are Vector Databases primarily used for in AI applications?",
+                    answers: [
+                        "Storing traditional relational data more efficiently",
+                        "Storing data in a way that allows AI models to efficiently retrieve relevant information for tasks like RAG",
+                        "Managing version control for AI model updates",
+                        "Backing up AI training datasets"
+                    ],
+                    correct: 1,
+                    explanation: "Vector Databases store data in a way that allows AI models to efficiently retrieve relevant information for tasks like RAG (Retrieval Augmented Generation), enabling more accurate and contextual AI responses."
+                },
+                {
+                    question: "What is MLOps (Machine Learning Operations)?",
+                    answers: [
+                        "The marketing department for machine learning products",
+                        "A set of practices for deploying and maintaining ML models in production reliably and at scale",
+                        "The legal team handling machine learning compliance",
+                        "The customer support team for AI applications"
+                    ],
+                    correct: 1,
+                    explanation: "MLOps (Machine Learning Operations) is a set of practices for deploying and maintaining machine learning models in production, ensuring their reliability, scalability, and effective management throughout their lifecycle."
+                },
+                {
+                    question: "What is 'Vibe Coding' in the context of AI development?",
+                    answers: [
+                        "Programming while listening to music to improve creativity",
+                        "Natural language-driven coding where users describe what they want and AI generates the code",
+                        "Collaborative coding sessions with multiple developers",
+                        "Coding practices that prioritize team morale and culture"
+                    ],
+                    correct: 1,
+                    explanation: "Vibe Coding is a term for natural language-driven coding, where users describe what they want in natural language and AI generates the code, emphasizing speed and prototyping over meticulous traditional coding."
+                },
+                {
+                    question: "What is 'Prompt Injection' in AI security?",
+                    answers: [
+                        "Adding new prompts to an AI training dataset",
+                        "A security vulnerability where malicious input manipulates an AI model to bypass its guardrails",
+                        "The process of improving AI responses through better prompts",
+                        "Automatically generating prompts for AI systems"
+                    ],
+                    correct: 1,
+                    explanation: "Prompt Injection is a security vulnerability where malicious input (a 'jailbreak') is crafted to manipulate an AI model into bypassing its intended guardrails or revealing sensitive information."
+                },
+                {
+                    question: "What does 'Red Teaming' mean in AI Security?",
+                    answers: [
+                        "Using red-colored interfaces to indicate security warnings",
+                        "A practice where security professionals simulate adversarial attacks on AI systems to identify vulnerabilities",
+                        "Creating backup AI systems in case the primary system fails",
+                        "Color-coding different security levels in AI applications"
+                    ],
+                    correct: 1,
+                    explanation: "Red Teaming in AI Security is a practice where security professionals simulate adversarial attacks on AI systems to identify vulnerabilities, particularly in areas like prompt injection and jailbreaking."
+                },
+                {
+                    question: "What are 'Synthetic Data' and why are they important for AI?",
+                    answers: [
+                        "Data created by combining multiple real datasets",
+                        "Artificially generated data that mimics real-world data properties without containing sensitive information",
+                        "Data that has been compressed using synthetic algorithms",
+                        "Backup copies of training data stored in synthetic formats"
+                    ],
+                    correct: 1,
+                    explanation: "Synthetic Data is artificially generated data that mimics the statistical properties of real-world data but does not contain actual sensitive information. It's used for training AI models while preserving privacy."
+                },
+                {
+                    question: "What is the 'Performance Theater Problem' in AI adoption?",
+                    answers: [
+                        "AI systems performing poorly in front of audiences",
+                        "Employees pretending to use AI effectively without achieving measurable productivity improvements",
+                        "AI presentations that are overly dramatic or exaggerated",
+                        "AI systems that work well in demos but fail in production"
+                    ],
+                    correct: 1,
+                    explanation: "The Performance Theater Problem is the phenomenon where individuals or organizations pretend to be leveraging AI effectively (e.g., having ChatGPT open) without actually achieving measurable changes in productivity or output."
+                },
+                {
+                    question: "What is a 'Context Window' in Large Language Models?",
+                    answers: [
+                        "The physical screen size used to display AI responses",
+                        "The input area of an LLM where information is 'packed' to provide necessary context for a task",
+                        "The time window during which an AI model processes information",
+                        "The user interface element that shows conversation history"
+                    ],
+                    correct: 1,
+                    explanation: "A Context Window is the input area of a Large Language Model, where information is 'packed' by context engineering to provide the necessary context for a task. It represents the amount of information the model can consider at once."
+                },
+                {
+                    question: "What are 'Edge Engineers' in the AI workforce?",
+                    answers: [
+                        "Engineers who work on cutting-edge AI research",
+                        "A new role focused on deploying AI intelligence onto smaller, local devices rather than cloud-based systems",
+                        "Engineers who specialize in debugging AI edge cases",
+                        "Senior engineers who provide oversight on AI projects"
+                    ],
+                    correct: 1,
+                    explanation: "Edge Engineers are a new and emerging role focused on deploying intelligence (e.g., quantized LLMs) onto smaller, local devices or 'at the edge' rather than relying on cloud-based AI, enabling offline and low-latency AI applications."
+                },
+                {
+                    question: "What is 'Feature Store Governance' in AI systems?",
+                    answers: [
+                        "Managing the user interface features of AI applications",
+                        "A data engineering concept for managing and ensuring quality of features used to train and deploy AI models",
+                        "Controlling which users have access to different AI features",
+                        "Governing the development timeline for new AI features"
+                    ],
+                    correct: 1,
+                    explanation: "Feature Store Governance is a data engineering concept related to managing and ensuring the quality and accessibility of features (data attributes) used to train and deploy AI models, ensuring consistency and reliability."
+                },
+                {
+                    question: "What is 'Orchestration' in AI Agent systems?",
+                    answers: [
+                        "The musical coordination of AI-generated audio",
+                        "Systems and processes for deploying, monitoring, and improving AI agents in complex multi-agent workflows",
+                        "The user interface design for AI applications",
+                        "The process of training multiple AI models simultaneously"
+                    ],
+                    correct: 1,
+                    explanation: "Orchestration in AI Agents refers to systems and processes that allow for the deployment, monitoring, and improvement of AI agents, particularly in complex multi-agent workflows where multiple AI systems need to work together."
+                },
+                {
+                    question: "What are 'Probabilistic Responses' in AI systems and why do they matter for QA?",
+                    answers: [
+                        "Responses that include probability estimates for their accuracy",
+                        "AI outputs that vary based on probabilities rather than being deterministic, making traditional QA methods insufficient",
+                        "Responses that are probably correct but not guaranteed",
+                        "AI systems that respond only when they're confident about the answer"
+                    ],
+                    correct: 1,
+                    explanation: "Probabilistic Responses are AI system outputs that are not deterministic or always the same for a given input, but rather vary based on probabilities. This makes traditional QA methods insufficient and requires 'always-on' production quality monitoring."
+                },
+                {
+                    question: "What is the 'Model Context Protocol' strategy?",
+                    answers: [
+                        "A communication standard between different AI models",
+                        "A strategy for handling context limits by surgically retrieving and providing relevant context from AI-readable files",
+                        "A protocol for sharing AI model weights between organizations",
+                        "A method for versioning AI model updates"
+                    ],
+                    correct: 1,
+                    explanation: "The Model Context Protocol is a strategy for handling context limits in AI models by surgically retrieving and providing relevant context from AI-readable files, maximizing the useful information within the model's context window."
+                },
+                {
+                    question: "What are 'Trust Deficits' in AI systems?",
+                    answers: [
+                        "Financial losses caused by AI implementation costs",
+                        "Lack of confidence in AI reliability and accuracy, often stemming from hallucinations or security vulnerabilities",
+                        "Legal liabilities associated with AI decision-making",
+                        "Performance gaps between expected and actual AI capabilities"
+                    ],
+                    correct: 1,
+                    explanation: "Trust Deficits refer to a lack of confidence or belief in the reliability and accuracy of AI systems, often stemming from issues like hallucinations, security vulnerabilities, or inconsistent performance."
+                },
+                {
+                    question: "What is 'Distribution' advantage in AI consulting?",
+                    answers: [
+                        "The ability to distribute AI models across multiple servers",
+                        "Having existing client relationships and a 'book of business' as a foundation for AI services",
+                        "Distributing AI training across multiple data centers",
+                        "The geographic distribution of AI consulting teams"
+                    ],
+                    correct: 1,
+                    explanation: "Distribution in AI consulting refers to having existing client relationships and a 'book of business,' which is seen as a foundational advantage for AI consultants seeking to integrate AI services into their offerings."
+                },
+                {
+                    question: "What does 'Accountability' mean specifically for AI-era Product Managers?",
+                    answers: [
+                        "Taking legal responsibility for AI decisions",
+                        "The critical human responsibility for delivering against time, budget, and resources, which LLMs cannot assume",
+                        "Being accountable for AI model accuracy and performance",
+                        "Managing team accountability when using AI tools"
+                    ],
+                    correct: 1,
+                    explanation: "Accountability in AI roles, particularly for Product Managers and Program Managers, refers to the critical human responsibility for delivering against time, budget, and resources. This is emphasized as something LLMs cannot yet assume, making it a uniquely human value-add."
+                },
+                {
+                    question: "What is a 'Repo Prompt/Onboard File' in AI development workflows?",
+                    answers: [
+                        "A file that contains the initial commit message for a repository",
+                        "Files (e.g., claude.md, .cursor-rules) that establish persistent context for AI tools by providing guidelines about a codebase", 
+                        "Documentation files that explain repository structure to new developers",
+                        "Configuration files that set up development environments"
+                    ],
+                    correct: 1,
+                    explanation: "Repo Prompt/Onboard Files are files (e.g., claude.md, .cursor-rules) that establish persistent context for AI tools by providing guidelines and information about a codebase, aiding in mapping and consistency enforcement."
+                },
+                {
+                    question: "What are 'Synthetic Panels' and how do Product Managers use them?",
+                    answers: [
+                        "Artificial control panels for managing AI systems",
+                        "AI-generated simulations of user groups that PMs can use to quickly pressure-test findings instead of real user interviews",
+                        "Fake data dashboards for testing purposes",
+                        "Synthetic user interfaces created by AI tools"
+                    ],
+                    correct: 1,
+                    explanation: "Synthetic Panels are AI-generated simulations of user groups or customer interviews that can be used by Product Managers to quickly pressure-test findings or gather insights in lieu of real-world interactions, though they supplement rather than replace real user research."
+                },
+                {
+                    question: "What are 'Vector ETLs' in AI data processing?",
+                    answers: [
+                        "Error tracking and logging systems for vector calculations",
+                        "Processes for Extracting, Transforming, and Loading data specifically for vector databases used by AI systems",
+                        "Validation, testing, and licensing procedures for AI vectors",
+                        "Version control systems for vector data management"
+                    ],
+                    correct: 1,
+                    explanation: "Vector ETLs are processes for Extracting, Transforming, and Loading data specifically for vector databases, enabling data to be used effectively by AI pipelines for tasks like semantic search and retrieval."
+                },
+                {
+                    question: "What is 'Cursor' in the context of AI-powered development?",
+                    answers: [
+                        "A pointer device optimized for AI interface interaction",
+                        "An AI-powered code editor used by engineers to write and refine code with AI assistance",
+                        "A cursor tracking system for AI user interface studies",
+                        "A database cursor system optimized for AI queries"
+                    ],
+                    correct: 1,
+                    explanation: "Cursor is an AI-powered code editor mentioned as a tool for engineers to write and refine code, often used in conjunction with other AI models like Gemini or Claude to enhance development productivity."
+                },
+                {
+                    question: "According to the study guide, which AI proficiency level (0-4) represents 'Systematic Integration'?",
+                    answers: [
+                        "Level 2 - where AI becomes part of regular workflow with consistent usage patterns",
+                        "Level 3 - where individuals systematically integrate AI across multiple core job functions",
+                        "Level 4 - where individuals achieve expert-level AI integration",
+                        "Level 1 - where individuals begin to systematically try AI tools"
+                    ],
+                    correct: 1,
+                    explanation: "Level 3 in the AI Talent Assessment framework represents 'Systematic Integration' where individuals systematically integrate AI across multiple core job functions, moving beyond basic usage to comprehensive workflow integration."
+                },
+                {
+                    question: "What is 'Devon' in the AI development toolchain?",
+                    answers: [
+                        "A programming language optimized for AI applications",
+                        "An AI tool for initial repository analysis, debugging, and generating PRs or tests",
+                        "A development environment setup tool",
+                        "A version control system designed for AI projects"
+                    ],
+                    correct: 1,
+                    explanation: "Devon is an AI tool mentioned for initial repository analysis, debugging, and generating PRs (Pull Requests) or tests, serving as part of the AI-powered development workflow."
+                },
+                {
+                    question: "What is 'Lovable' in the context of AI coding tools?",
+                    answers: [
+                        "A user experience design tool for AI interfaces",
+                        "A natural language-driven coding tool that allows users to generate code by prompting in natural language",
+                        "A collaborative coding platform with AI features",
+                        "A code quality assessment tool powered by AI"
+                    ],
+                    correct: 1,
+                    explanation: "Lovable is a natural language-driven coding tool (vibe coding tool) that allows users to generate code by prompting in natural language, emphasizing speed and accessibility for non-coders."
+                },
+                {
+                    question: "What key principle underlies 'Durable Patterns/Workflows' in AI development?",
+                    answers: [
+                        "They require the most expensive AI hardware to implement",
+                        "They are stable, battle-tested methods expected to persist despite rapid changes in specific AI tools",
+                        "They are the newest and most cutting-edge AI techniques available",
+                        "They work only with specific AI models and cannot be generalized"
+                    ],
+                    correct: 1,
+                    explanation: "Durable Patterns/Workflows are stable and battle-tested methods or approaches for using AI in development and other tasks that are expected to persist despite rapid changes in specific AI tools or technologies, focusing on fundamental approaches rather than tool-specific implementations."
+                },
+                {
+                    question: "According to the study guide, what is a key reason why understanding durable AI workflows is more important than focusing on specific tools?",
+                    answers: [
+                        "Specific tools are more expensive and harder to access",
+                        "The AI landscape changes rapidly, but fundamental workflow patterns remain stable and transferable",
+                        "Durable workflows require less computational power to implement",
+                        "Specific tools are only available to large enterprises"
+                    ],
+                    correct: 1,
+                    explanation: "Understanding durable workflows is more important than focusing solely on specific tools or transient 'hacks' because the AI landscape evolves rapidly. While specific tools may become obsolete, fundamental workflow patterns remain stable and can be applied across different tools and technologies."
+                },
+                {
+                    question: "What is the primary benefit of the 'Codebase Mapping and Onboarding' AI workflow pattern?",
+                    answers: [
+                        "It automatically fixes bugs in legacy codebases",
+                        "It accelerates understanding of existing codebases for new engineers and enables non-engineers to grasp technical patterns",
+                        "It converts old code to modern programming languages",
+                        "It optimizes code performance through AI analysis"
+                    ],
+                    correct: 1,
+                    explanation: "The Codebase Mapping and Onboarding workflow pattern allows new engineers to point AI at a repository to rapidly gain high-level context, accelerating their onboarding process. Additionally, even non-engineers can use it to understand technical patterns, making codebases more accessible."
+                },
+                {
+                    question: "Based on the study guide, what is a key strategy for becoming an 'A+ AI consultant'?",
+                    answers: [
+                        "Focus exclusively on the latest AI tools and technologies",
+                        "Combine domain-specific expertise with specificity in AI offerings while building a professional network",
+                        "Offer the broadest possible range of AI services to maximize market appeal",
+                        "Compete primarily on price rather than expertise"
+                    ],
+                    correct: 1,
+                    explanation: "Key strategies for becoming an A+ AI consultant include avoiding 'AI washing,' developing domain-specific expertise, being specific in offerings rather than trying to be everything to everyone, and building a professional network for long-term success. This approach emphasizes substance over hype."
+                },
+                {
+                    question: "What does 'QA (Quality Assurance) in AI' require that differs from traditional software QA?",
+                    answers: [
+                        "More manual testing and fewer automated tests",
+                        "A shift to 'always-on' production quality monitoring rather than just pre-launch testing due to probabilistic responses",
+                        "Simpler testing procedures since AI systems are more reliable",
+                        "Focus only on user interface testing rather than underlying functionality"
+                    ],
+                    correct: 1,
+                    explanation: "QA in AI requires ensuring the quality and reliability of AI systems, which is particularly challenging due to probabilistic responses. Unlike traditional software, AI systems don't always produce the same output for the same input, requiring a shift to 'always-on' production quality monitoring rather than just pre-launch testing."
+                },
+                {
+                    question: "According to the study guide, what fundamental shift does AI create in how we think about work execution?",
+                    answers: [
+                        "All work will eventually be automated, eliminating human jobs",
+                        "The cost and effort of execution decreases while expectations for output quality and speed increase, reshaping job roles",
+                        "Human workers will become obsolete in all knowledge work",
+                        "Only technical jobs will survive the AI transformation"
+                    ],
+                    correct: 1,
+                    explanation: "AI creates a fundamental shift where execution becomes cheaper and faster, but this leads to higher expectations for output quality and speed. Rather than eliminating jobs entirely, this reshapes roles - some execution-focused aspects may be automated while creating new needs for oversight, quality control, relationship management, and strategic thinking."
+                }
+            ];
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
