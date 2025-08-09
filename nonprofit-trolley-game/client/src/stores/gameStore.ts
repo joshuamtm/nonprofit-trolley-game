@@ -158,9 +158,29 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           get().updateVoteSummary(data);
         });
         
-        realtimeService.on('scenario_started', (data) => {
-          // Load the new scenario
-          console.log('New scenario started:', data);
+        realtimeService.on('scenario_started', async (data) => {
+          // Load the new scenario data
+          console.log('📢 scenario_started event received:', data);
+          try {
+            // Load scenario from database
+            console.log('🔍 Loading scenario from database...');
+            const { data: scenarios, error } = await RoomService.loadScenarios();
+            if (scenarios && scenarios.length > 0) {
+              const currentScenario = scenarios.find(s => s.id === data.scenario_id) || scenarios[0];
+              console.log('🎯 Setting current scenario:', currentScenario?.title);
+              set({ 
+                currentScenario,
+                hasVoted: false,
+                myVote: null,
+                myRationale: '',
+                voteSummary: null,
+                showResults: false
+              });
+              console.log('✅ Scenario state updated for participants');
+            }
+          } catch (error) {
+            console.error('❌ Failed to load scenario:', error);
+          }
         });
         
         realtimeService.on('timer_started', (data) => {
@@ -229,13 +249,21 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!session) return;
     
     try {
+      // Load scenario data first
+      const { data: scenarios, error: loadError } = await RoomService.loadScenarios();
+      if (loadError) throw loadError;
+      
+      const scenario = scenarios?.find(s => s.id === scenarioId);
+      if (!scenario) throw new Error('Scenario not found');
+      
       // Only call RoomService in non-demo mode (demo scenarios are handled in components)
       if (!isDemo) {
         await RoomService.startScenario(session.id, scenarioId);
       }
       
-      // Reset voting state for new scenario
+      // Set the current scenario and reset voting state
       set({
+        currentScenario: scenario,
         hasVoted: false,
         myVote: null,
         myRationale: '',

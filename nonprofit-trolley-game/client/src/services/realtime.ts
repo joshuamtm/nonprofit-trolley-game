@@ -96,6 +96,14 @@ export class RealtimeService {
         filter: `session_id=eq.${sessionId}`
       }, (payload) => {
         this.handleParticipantUpdate(payload.new as any);
+      })
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'session_scenarios',
+        filter: `session_id=eq.${sessionId}`
+      }, (payload) => {
+        this.handleSessionScenarioInsert(payload.new as any);
       });
 
     await this.channel.subscribe();
@@ -219,6 +227,17 @@ export class RealtimeService {
           active_count: count,
         });
       }
+    }
+  }
+
+  private async handleSessionScenarioInsert(sessionScenario: any): Promise<void> {
+    if (sessionScenario.status === 'active') {
+      // New scenario started - emit scenario_started event
+      this.handleEvent('scenario_started', {
+        session_id: sessionScenario.session_id,
+        scenario_id: sessionScenario.scenario_id,
+        scenario_title: '', // We'll fetch this if needed
+      });
     }
   }
 }

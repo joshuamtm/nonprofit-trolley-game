@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../stores/gameStore';
 import { mockScenarios, MockRoomService, isMockMode } from '../services/mockData';
+import { RoomService } from '../services/rooms';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import WordCloud from './WordCloud';
 import FacilitatorDashboard from './FacilitatorDashboard';
@@ -19,6 +20,7 @@ const GameRoom: React.FC = () => {
   const {
     session,
     participant,
+    currentScenario,
     loading,
     error,
     hasVoted,
@@ -30,7 +32,9 @@ const GameRoom: React.FC = () => {
     voteSummary,
     submitVote,
     setError,
-    joinRoom
+    joinRoom,
+    startScenario,
+    startTimer
   } = useGameStore();
 
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
@@ -47,7 +51,8 @@ const GameRoom: React.FC = () => {
   const pullButtonRef = useRef<HTMLButtonElement>(null);
   const dontPullButtonRef = useRef<HTMLButtonElement>(null);
 
-  const currentScenario = mockScenarios[currentScenarioIndex];
+  // Use scenario from store, fallback to mock for demo mode
+  const scenario = currentScenario || (isMockMode ? mockScenarios[currentScenarioIndex] : null);
 
   // Screen reader announcements
   const {
@@ -67,6 +72,18 @@ const GameRoom: React.FC = () => {
     }
   }, [roomCode]);
 
+  // Handle scenario loading and game phase transitions
+  useEffect(() => {
+    if (scenario && !isMockMode) {
+      // If we have a scenario loaded and we're not in mock mode, 
+      // it means the facilitator started a scenario, so transition to voting
+      setGamePhase('voting');
+    } else if (!scenario && !isMockMode) {
+      // If no scenario is loaded, we should be in waiting phase
+      setGamePhase('waiting');
+    }
+  }, [scenario, isMockMode]);
+
   const handleJoinRoom = async () => {
     if (!roomCode) return;
     
@@ -81,15 +98,47 @@ const GameRoom: React.FC = () => {
     }
   };
 
-  const handleStartScenario = () => {
-    setGamePhase('voting');
-    announceGamePhase('voting', `Scenario: ${currentScenario.title}. You have ${timerDuration} seconds to make your choice.`);
-    announceScenarioChange(currentScenarioIndex, mockScenarios.length, currentScenario.title);
+  const handleStartScenario = async () => {
+    console.log('🚀 handleStartScenario called', { isMockMode, scenario: scenario?.title });
     
-    // Simulate starting timer with custom duration
-    setTimeout(() => {
-      setGamePhase('results');
-    }, timerDuration * 1000);
+    if (isMockMode) {
+      // Mock mode behavior
+      setGamePhase('voting');
+      announceGamePhase('voting', `Scenario: ${scenario?.title}. You have ${timerDuration} seconds to make your choice.`);
+      announceScenarioChange(currentScenarioIndex, mockScenarios.length, scenario?.title || '');
+      
+      // Simulate starting timer with custom duration
+      setTimeout(() => {
+        setGamePhase('results');
+      }, timerDuration * 1000);
+    } else {
+      // Real mode - use the store to start scenario with Supabase
+      try {
+        console.log('📡 Starting real scenario...', { session: session?.id });
+        
+        // Load the first scenario if none is loaded
+        if (!scenario) {
+          console.log('📚 Loading scenarios from database...');
+          const { data: scenarios, error } = await RoomService.loadScenarios();
+          if (scenarios && scenarios.length > 0) {
+            console.log('✅ Starting scenario:', scenarios[0].title);
+            await startScenario(scenarios[0].id);
+          }
+        } else {
+          console.log('🎯 Starting existing scenario:', scenario.title);
+          await startScenario(scenario.id);
+        }
+        
+        // Start the timer for real mode
+        console.log('⏰ Starting timer:', timerDuration, 'seconds');
+        startTimer(timerDuration);
+        
+        console.log('✅ Scenario start completed');
+      } catch (error: any) {
+        console.error('❌ Failed to start scenario:', error);
+        setError(error.message || 'Failed to start scenario');
+      }
+    }
   };
 
   const handleVote = async (vote: 'pull' | 'dont_pull') => {
@@ -311,10 +360,16 @@ const GameRoom: React.FC = () => {
           <div className="timer-container" role="timer" aria-label="Voting countdown timer">
             <CountdownCircleTimer
               isPlaying={timerActive}
-              duration={30}
+              duration={timerDuration}
               colors={['#2ecc71', '#f39c12', '#e74c3c']}
-              colorsTime={[20, 10, 0]}
+              colorsTime={[timerDuration * 0.67, timerDuration * 0.33, 0]}
               size={80}
+              onComplete={() => {
+                console.log('⏰ Timer completed');
+                // Transition to results phase when timer completes
+                setGamePhase('results');
+                return { shouldRepeat: false, delay: 0 };
+              }}
             >
               {({ remainingTime }) => (
                 <div className="timer-display" aria-live="assertive" aria-atomic="true">
@@ -332,17 +387,22 @@ const GameRoom: React.FC = () => {
         {gamePhase === 'waiting' ? (
           <section className="waiting-phase" aria-labelledby="waiting-heading">
             <h2 id="waiting-heading">Ready for Next Scenario?</h2>
-            <p aria-label={`Currently on scenario ${currentScenarioIndex + 1} of ${mockScenarios.length} total scenarios`}>
-              Scenario {currentScenarioIndex + 1} of {mockScenarios.length}
-            </p>
+            {isMockMode ? (
+              <p aria-label={`Currently on scenario ${currentScenarioIndex + 1} of ${mockScenarios.length} total scenarios`}>
+                Scenario {currentScenarioIndex + 1} of {mockScenarios.length}
+              </p>
+            ) : (
+              <p>Scenario {session ? '1 of 3' : 'Loading...'}</p>
+            )}
             
             {isFacilitator ? (
               <button 
                 className="start-scenario-button"
                 onClick={handleStartScenario}
                 aria-describedby="scenario-title-preview"
+                disabled={!isMockMode && !scenario}
               >
-                Start Scenario: <span id="scenario-title-preview">{currentScenario.title}</span>
+                Start Scenario: <span id="scenario-title-preview">{scenario?.title || 'Select a scenario'}</span>
               </button>
             ) : (
               <p role="status" aria-live="polite">Waiting for facilitator to start the next scenario...</p>
@@ -354,22 +414,22 @@ const GameRoom: React.FC = () => {
               </div>
             )}
           </section>
-        ) : gamePhase === 'voting' ? (
+        ) : gamePhase === 'voting' && scenario ? (
           <section className="voting-phase" aria-labelledby="scenario-heading">
             <div className="scenario-layout">
               <div className="scenario-content">
                 <header className="scenario-header">
-                  <h2 id="scenario-heading">{currentScenario.title}</h2>
-                  {currentScenario.content_warnings.length > 0 && (
+                  <h2 id="scenario-heading">{scenario?.title}</h2>
+                  {scenario?.content_warnings && scenario.content_warnings.length > 0 && (
                     <div className="content-warnings" role="alert" aria-label="Content warning">
-                      ⚠️ Content warnings: {currentScenario.content_warnings.join(', ')}
+                      ⚠️ Content warnings: {scenario.content_warnings.join(', ')}
                     </div>
                   )}
                 </header>
 
                 <div className="scenario-context" role="region" aria-labelledby="context-heading">
                   <h3 id="context-heading" className="sr-only">Scenario Context</h3>
-                  <p>{currentScenario.context}</p>
+                  <p>{scenario?.context}</p>
                 </div>
 
                 <fieldset className="voting-options" role="radiogroup" aria-labelledby="voting-heading" aria-required="true">
@@ -388,7 +448,7 @@ const GameRoom: React.FC = () => {
                   >
                     <div className="vote-icon" aria-hidden="true">🔄</div>
                     <div className="vote-label">Pull Lever</div>
-                    <div className="vote-description" id="pull-description">{currentScenario.ai_option}</div>
+                    <div className="vote-description" id="pull-description">{scenario?.ai_option}</div>
                   </button>
 
                   <button
@@ -404,7 +464,7 @@ const GameRoom: React.FC = () => {
                   >
                     <div className="vote-icon" aria-hidden="true">🛑</div>
                     <div className="vote-label">Don't Pull</div>
-                    <div className="vote-description" id="dont-pull-description">{currentScenario.non_ai_option}</div>
+                    <div className="vote-description" id="dont-pull-description">{scenario?.non_ai_option}</div>
                   </button>
                 </fieldset>
 
@@ -417,10 +477,14 @@ const GameRoom: React.FC = () => {
                       id="rationale"
                       type="text"
                       value={rationale}
-                      onChange={(e) => setRationale(e.target.value)}
+                      onChange={(e) => {
+                        console.log('🖊️ Rationale input changed:', e.target.value);
+                        setRationale(e.target.value);
+                      }}
                       maxLength={80}
                       placeholder="Brief explanation of your choice..."
                       aria-describedby="char-count rationale-help"
+                      autoComplete="off"
                     />
                     <div id="rationale-help" className="sr-only">
                       Enter a brief explanation for your voting choice. This is optional and will be used anonymously in the word cloud.

@@ -24,16 +24,23 @@ const ParticipantPage: React.FC = () => {
 
     setError(null);
 
-    if (isMockMode) {
-      const { participant, error } = await MockRoomService.joinRoom(code.toUpperCase());
-      if (error) {
-        setError(error.message);
-        return;
+    try {
+      if (isMockMode) {
+        const { participant, error } = await MockRoomService.joinRoom(code.toUpperCase());
+        if (error) {
+          setError(error.message);
+          return;
+        }
+        // Navigate to the room
+        navigate(`/room/${code.toUpperCase()}`);
+      } else {
+        await joinRoom(code.toUpperCase());
+        // Navigate to the room after successful join
+        navigate(`/room/${code.toUpperCase()}`);
       }
-      // Navigate to the room
-      navigate(`/room/${code.toUpperCase()}`);
-    } else {
-      await joinRoom(code.toUpperCase());
+    } catch (error: any) {
+      console.error('Join room error:', error);
+      setError(error.message || 'Failed to join room. Please check the room code and try again.');
     }
   };
 
