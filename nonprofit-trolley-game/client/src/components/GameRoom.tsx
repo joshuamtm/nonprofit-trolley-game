@@ -44,7 +44,7 @@ const GameRoom: React.FC = () => {
   const [rationale, setRationale] = useState('');
   const [pullRationales, setPullRationales] = useState<string[]>([]);
   const [dontPullRationales, setDontPullRationales] = useState<string[]>([]);
-  const [gamePhase, setGamePhase] = useState<'waiting' | 'voting' | 'results'>('waiting');
+  const [gamePhase, setGamePhase] = useState<'waiting' | 'voting' | 'results' | 'completed'>('waiting');
   const [mockVotes, setMockVotes] = useState<Array<{vote: 'pull' | 'dont_pull', rationale: string, mitigation?: string}>>([]);
   const [moderationMessage, setModerationMessage] = useState<string>('');
   const [selectedVote, setSelectedVote] = useState<'pull' | 'dont_pull' | null>(null);
@@ -258,7 +258,7 @@ const GameRoom: React.FC = () => {
   const handleVoteSelection = (vote: 'pull' | 'dont_pull') => {
     if (hasVoted) return;
     
-    console.log('Fix Cycle-1-14: Double-click fix - Setting vote:', vote, 'hasVoted:', hasVoted);
+    // Debug: Vote selection tracking
     // Always set the vote (no toggle behavior for better UX)
     setSelectedVote(vote);
     console.log('🗳️ Vote selected:', vote);
@@ -297,10 +297,9 @@ const GameRoom: React.FC = () => {
         rationale: processedRationale || rationale.trim(),
         mitigation: mitigation.trim()
       };
-      console.log('Fix Cycle-1-15: Adding vote with mitigation:', newVote);
+      // Debug: Adding vote with mitigation
       setMockVotes(prev => {
         const updated = [...prev, newVote];
-        console.log('Fix Cycle-1-15: Updated mockVotes:', updated);
         return updated;
       });
       
@@ -322,7 +321,7 @@ const GameRoom: React.FC = () => {
   };
 
   const handleNextScenario = async () => {
-    console.log('Fix Cycle-1-12: Fixing scenario progression', { currentIndex: currentScenarioIndex, totalScenarios: mockScenarios.length });
+    // Debug: Scenario progression tracking
     if (isMockMode) {
       if (currentScenarioIndex < mockScenarios.length - 1) {
         const nextIndex = currentScenarioIndex + 1;
@@ -698,7 +697,7 @@ const GameRoom: React.FC = () => {
                     
                     <div className="input-group">
                       <label htmlFor="mitigation" id="mitigation-heading">
-                        {selectedVote === 'pull' ? 'How could AI risks be managed?' : 'Any suggestions?'} (optional, max 80 characters)
+                        Risk Mitigation: How could potential harms be reduced? (optional, max 80 characters)
                       </label>
                       <input
                         id="mitigation"
