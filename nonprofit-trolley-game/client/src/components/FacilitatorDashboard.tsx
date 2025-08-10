@@ -7,11 +7,11 @@ interface FacilitatorDashboardProps {
   roomCode: string;
   onStartScenario: () => void;
   onNextScenario: () => void;
-  gamePhase: 'waiting' | 'voting' | 'results';
+  gamePhase: 'waiting' | 'voting' | 'results' | 'completed';
   currentScenarioIndex: number;
   currentScenario?: any;
   participantCount?: number;
-  mockVotes: Array<{vote: 'pull' | 'dont_pull', rationale: string}>;
+  mockVotes: Array<{vote: 'pull' | 'dont_pull', rationale: string, mitigation?: string}>;
 }
 
 const FacilitatorDashboard: React.FC<FacilitatorDashboardProps> = ({

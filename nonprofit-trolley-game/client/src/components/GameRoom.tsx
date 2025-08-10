@@ -258,6 +258,7 @@ const GameRoom: React.FC = () => {
   const handleVoteSelection = (vote: 'pull' | 'dont_pull') => {
     if (hasVoted) return;
     
+    console.log('Fix Cycle-1-14: Double-click fix - Setting vote:', vote, 'hasVoted:', hasVoted);
     // Always set the vote (no toggle behavior for better UX)
     setSelectedVote(vote);
     console.log('🗳️ Vote selected:', vote);
@@ -296,7 +297,12 @@ const GameRoom: React.FC = () => {
         rationale: processedRationale || rationale.trim(),
         mitigation: mitigation.trim()
       };
-      setMockVotes(prev => [...prev, newVote]);
+      console.log('Fix Cycle-1-15: Adding vote with mitigation:', newVote);
+      setMockVotes(prev => {
+        const updated = [...prev, newVote];
+        console.log('Fix Cycle-1-15: Updated mockVotes:', updated);
+        return updated;
+      });
       
       // Mark as voted in mock mode
       useGameStore.setState({ hasVoted: true, myVote: selectedVote, myRationale: processedRationale || rationale.trim() });
@@ -316,21 +322,28 @@ const GameRoom: React.FC = () => {
   };
 
   const handleNextScenario = async () => {
+    console.log('Fix Cycle-1-12: Fixing scenario progression', { currentIndex: currentScenarioIndex, totalScenarios: mockScenarios.length });
     if (isMockMode) {
       if (currentScenarioIndex < mockScenarios.length - 1) {
-        setCurrentScenarioIndex(prev => prev + 1);
+        const nextIndex = currentScenarioIndex + 1;
+        setCurrentScenarioIndex(nextIndex);
         setGamePhase('waiting');
         setRationale('');
         setMitigation('');
+        setPullRationales([]); // Clear pull rationales array
+        setDontPullRationales([]); // Clear don't pull rationales array
+        setMitigations([]); // Clear mitigations array
         setSelectedVote(null);
         setMockVotes([]); // Clear votes for new scenario
         setModerationMessage('');
         // Reset voting state in store for mock mode
         useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
-        announceGamePhase('waiting', `Moving to scenario ${currentScenarioIndex + 2} of ${mockScenarios.length}.`);
+        announceGamePhase('waiting', `Moving to scenario ${nextIndex + 1} of ${mockScenarios.length}.`);
+        console.log(`✅ Advanced to scenario ${nextIndex + 1}: ${mockScenarios[nextIndex]?.title}`);
       } else {
-        setGamePhase('waiting');
-        announceGamePhase('waiting', 'Game session complete. All scenarios have been finished.');
+        setGamePhase('completed');
+        announceGamePhase('completed', 'Game session complete. All scenarios have been finished.');
+        console.log('✅ All scenarios completed!');
       }
     } else {
       // Real mode - load next scenario from database
@@ -536,7 +549,7 @@ const GameRoom: React.FC = () => {
           <div className="timer-container" role="timer" aria-label="Voting countdown timer">
             <CountdownCircleTimer
               key={`timer-${currentScenario?.id || currentScenarioIndex}`}
-              isPlaying={timerActive || (gamePhase === 'voting' && !isMockMode)}
+              isPlaying={timerActive || (gamePhase === 'voting' && !isMockMode && !hasVoted)}
               duration={timerDuration}
               initialRemainingTime={secondsRemaining > 0 ? secondsRemaining : timerDuration}
               colors={['#2ecc71', '#f39c12', '#e74c3c']}
@@ -905,6 +918,29 @@ const GameRoom: React.FC = () => {
                 </div>
               </nav>
             )}
+          </section>
+        ) : gamePhase === 'completed' ? (
+          <section className="completed-phase" aria-labelledby="completed-heading">
+            <h2 id="completed-heading">🎉 All Scenarios Complete!</h2>
+            <div className="completion-summary">
+              <p>Thank you for participating in the Nonprofit Trolley Game.</p>
+              <p>You've explored all {mockScenarios.length} ethical scenarios involving AI in nonprofit work.</p>
+              <div className="session-stats">
+                <h3>Session Summary</h3>
+                <ul>
+                  <li>Scenarios Completed: {mockScenarios.length}</li>
+                  <li>Total Votes Cast: {mockVotes.length}</li>
+                </ul>
+              </div>
+              {isFacilitator && (
+                <button 
+                  className="restart-button"
+                  onClick={() => window.location.reload()}
+                >
+                  Start New Session
+                </button>
+              )}
+            </div>
           </section>
         ) : null}
       </main>
