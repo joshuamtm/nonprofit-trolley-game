@@ -33,9 +33,15 @@
 }
 
 .timer-display {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: var(--mtm-navy);
+  color: var(--mtm-accent);
+  background: rgba(241, 143, 56, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: var(--mtm-border-radius-md);
+  border: 2px solid var(--mtm-accent);
+  min-width: 120px;
+  text-align: center;
 }
 
 .view-toggle {
