@@ -93,17 +93,10 @@ const GameRoom: React.FC = () => {
 
   // Handle scenario loading and game phase transitions
   useEffect(() => {
-    if (scenario && !isMockMode) {
-      // If we have a scenario loaded and we're not in mock mode, 
-      // it means the facilitator started a scenario, so transition to voting
-      setGamePhase('voting');
-      // Reset voting state for new scenario
-      setSelectedVote(null);
-      setRationale('');
-      setMitigation('');
-      // Reset hasVoted in store
-      useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
-    } else if (!scenario && !isMockMode) {
+    // Don't auto-transition to voting just because scenario exists
+    // Scenarios are pre-loaded but game should stay in waiting phase
+    // until facilitator explicitly starts
+    if (!scenario && !isMockMode) {
       // If no scenario is loaded, we should be in waiting phase
       setGamePhase('waiting');
     }
@@ -117,11 +110,11 @@ const GameRoom: React.FC = () => {
     }
   }, [showResults, isMockMode]);
 
-  // Monitor when scenario changes to ensure UI is reset
+  // Monitor when scenario changes and timer starts to transition to voting
   useEffect(() => {
-    if (currentScenario && !isMockMode) {
-      console.log('📄 Scenario changed:', currentScenario.title);
-      // Force re-render with new scenario
+    if (currentScenario && timerActive && !isMockMode) {
+      console.log('📄 Scenario started by facilitator:', currentScenario.title);
+      // Transition to voting phase when timer is active
       setGamePhase('voting');
       setSelectedVote(null);
       setRationale('');
@@ -129,7 +122,7 @@ const GameRoom: React.FC = () => {
       // Reset hasVoted in store
       useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
     }
-  }, [currentScenario?.id]);
+  }, [currentScenario?.id, timerActive]);
 
   // Start a local timer when voting phase begins (for participants)
   useEffect(() => {
@@ -242,6 +235,9 @@ const GameRoom: React.FC = () => {
           console.log('🎯 Starting scenario:', scenarioToStart.title);
           await startScenario(scenarioToStart.id);
         }
+        
+        // Transition to voting phase when scenario starts
+        setGamePhase('voting');
         
         // Start the timer for real mode (always 30 seconds)
         console.log('⏰ Starting timer: 30 seconds');

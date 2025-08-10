@@ -6,6 +6,7 @@ import FacilitatorPage from './components/FacilitatorPage';
 import ParticipantPage from './components/ParticipantPage';
 import GameRoom from './components/GameRoom';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import MTMFooter from './components/MTMFooter';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/join/:roomCode?" element={<ParticipantPage />} />
             <Route path="/room/:roomCode" element={<GameRoom />} />
           </Routes>
+          <MTMFooter />
         </div>
       </Router>
     </ErrorBoundary>

@@ -174,7 +174,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
                 myVote: null,
                 myRationale: '',
                 voteSummary: null,
-                showResults: false
+                showResults: false,
+                timerActive: true,  // Set timer as active when scenario starts
+                secondsRemaining: 30  // Default to 30 seconds
               });
               console.log('✅ Scenario state updated for participants');
             }
