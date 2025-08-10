@@ -45,7 +45,7 @@ const GameRoom: React.FC = () => {
   const [pullRationales, setPullRationales] = useState<string[]>([]);
   const [dontPullRationales, setDontPullRationales] = useState<string[]>([]);
   const [gamePhase, setGamePhase] = useState<'waiting' | 'voting' | 'results'>('waiting');
-  const [mockVotes, setMockVotes] = useState<Array<{vote: 'pull' | 'dont_pull', rationale: string}>>([]);
+  const [mockVotes, setMockVotes] = useState<Array<{vote: 'pull' | 'dont_pull', rationale: string, mitigation?: string}>>([]);
   const [moderationMessage, setModerationMessage] = useState<string>('');
   const [selectedVote, setSelectedVote] = useState<'pull' | 'dont_pull' | null>(null);
   const timerDuration = 30; // Fixed 30-second timer for all scenarios
@@ -60,7 +60,9 @@ const GameRoom: React.FC = () => {
   const dontPullButtonRef = useRef<HTMLButtonElement>(null);
 
   // Use scenario from store, fallback to mock for demo mode or available scenarios
-  const scenario = currentScenario || (isMockMode ? mockScenarios[currentScenarioIndex] : availableScenarios[currentScenarioIndex]);
+  const scenario = isMockMode 
+    ? mockScenarios[currentScenarioIndex] 
+    : (currentScenario || availableScenarios[currentScenarioIndex]);
 
   // Screen reader announcements
   const {
@@ -99,6 +101,8 @@ const GameRoom: React.FC = () => {
       setSelectedVote(null);
       setRationale('');
       setMitigation('');
+      // Reset hasVoted in store
+      useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
     } else if (!scenario && !isMockMode) {
       // If no scenario is loaded, we should be in waiting phase
       setGamePhase('waiting');
@@ -122,6 +126,8 @@ const GameRoom: React.FC = () => {
       setSelectedVote(null);
       setRationale('');
       setMitigation('');
+      // Reset hasVoted in store
+      useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
     }
   }, [currentScenario?.id]);
 
@@ -146,33 +152,42 @@ const GameRoom: React.FC = () => {
 
   // Fetch rationales and mitigations when results phase begins
   useEffect(() => {
-    if (gamePhase === 'results' && session && currentScenario && !isMockMode) {
-      console.log('📊 Fetching rationales and mitigations for quotes display');
-      
-      // Fetch rationales
-      RoomService.getRationales(session.id, currentScenario.id).then(({ data, error }) => {
-        if (data && !error) {
-          console.log('✅ Got rationales:', data);
-          // Update rationales for display as quotes
-          setPullRationales(data.pull);
-          setDontPullRationales(data.dont_pull);
-          updateRationales({ pull: data.pull, dont_pull: data.dont_pull });
-        } else {
-          console.error('Failed to fetch rationales:', error);
-        }
-      });
-      
-      // Fetch mitigations
-      RoomService.getMitigations(session.id, currentScenario.id).then(({ data, error }) => {
-        if (data && !error) {
-          console.log('✅ Got mitigations:', data);
-          setMitigations(data);
-        } else {
-          console.error('Failed to fetch mitigations:', error);
-        }
-      });
+    if (gamePhase === 'results') {
+      if (isMockMode) {
+        // In mock mode, extract mitigations from mockVotes
+        const mockMitigations = mockVotes
+          .filter(v => v.mitigation && v.mitigation.trim())
+          .map(v => v.mitigation!);
+        setMitigations(mockMitigations);
+        console.log('📊 Mock mitigations:', mockMitigations);
+      } else if (session && currentScenario) {
+        console.log('📊 Fetching rationales and mitigations for quotes display');
+        
+        // Fetch rationales
+        RoomService.getRationales(session.id, currentScenario.id).then(({ data, error }) => {
+          if (data && !error) {
+            console.log('✅ Got rationales:', data);
+            // Update rationales for display as quotes
+            setPullRationales(data.pull);
+            setDontPullRationales(data.dont_pull);
+            updateRationales({ pull: data.pull, dont_pull: data.dont_pull });
+          } else {
+            console.error('Failed to fetch rationales:', error);
+          }
+        });
+        
+        // Fetch mitigations
+        RoomService.getMitigations(session.id, currentScenario.id).then(({ data, error }) => {
+          if (data && !error) {
+            console.log('✅ Got mitigations:', data);
+            setMitigations(data);
+          } else {
+            console.error('Failed to fetch mitigations:', error);
+          }
+        });
+      }
     }
-  }, [gamePhase, session, currentScenario]);
+  }, [gamePhase, session, currentScenario, isMockMode, mockVotes]);
 
   const handleJoinRoom = async () => {
     if (!roomCode) return;
@@ -194,12 +209,18 @@ const GameRoom: React.FC = () => {
     if (isMockMode) {
       // Mock mode behavior
       setGamePhase('voting');
+      // Reset voting state when starting a new scenario
+      useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '', showResults: false });
+      setSelectedVote(null);
+      setRationale('');
+      setMitigation('');
       announceGamePhase('voting', `Scenario: ${scenario?.title}. You have ${timerDuration} seconds to make your choice.`);
       announceScenarioChange(currentScenarioIndex, mockScenarios.length, scenario?.title || '');
       
       // Simulate starting timer with custom duration
       setTimeout(() => {
         setGamePhase('results');
+        useGameStore.setState({ showResults: true });
       }, timerDuration * 1000);
     } else {
       // Real mode - use the store to start scenario with Supabase
@@ -269,8 +290,16 @@ const GameRoom: React.FC = () => {
       // Simulate vote submission
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Add to mock votes for word cloud demonstration
-      setMockVotes(prev => [...prev, { vote: selectedVote, rationale: processedRationale || rationale.trim() }]);
+      // Add to mock votes for demonstration
+      const newVote = { 
+        vote: selectedVote, 
+        rationale: processedRationale || rationale.trim(),
+        mitigation: mitigation.trim()
+      };
+      setMockVotes(prev => [...prev, newVote]);
+      
+      // Mark as voted in mock mode
+      useGameStore.setState({ hasVoted: true, myVote: selectedVote, myRationale: processedRationale || rationale.trim() });
       
       // Announce successful vote submission
       announceVoteSubmitted(selectedVote, processedRationale || rationale.trim());
@@ -296,6 +325,8 @@ const GameRoom: React.FC = () => {
         setSelectedVote(null);
         setMockVotes([]); // Clear votes for new scenario
         setModerationMessage('');
+        // Reset voting state in store for mock mode
+        useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
         announceGamePhase('waiting', `Moving to scenario ${currentScenarioIndex + 2} of ${mockScenarios.length}.`);
       } else {
         setGamePhase('waiting');
@@ -328,6 +359,8 @@ const GameRoom: React.FC = () => {
           setMitigation('');
           setSelectedVote(null);
           setModerationMessage('');
+          // Reset voting state in store
+          useGameStore.setState({ hasVoted: false, myVote: null, myRationale: '' });
           
           // Don't start the scenario yet - just reset to waiting state
           // The facilitator will start it when ready
