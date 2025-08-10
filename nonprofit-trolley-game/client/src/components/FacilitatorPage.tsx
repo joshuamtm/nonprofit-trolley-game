@@ -10,7 +10,6 @@ const FacilitatorPage: React.FC = () => {
   const navigate = useNavigate();
   const { session, loading, error, createRoom, setError } = useGameStore();
   const [config, setConfig] = useState({
-    timerDuration: 30,
     maxParticipants: 200,
     moderationEnabled: true,
     contentWarnings: true,
@@ -44,24 +43,6 @@ const FacilitatorPage: React.FC = () => {
           <div className="form-section">
             <h2>Room Configuration</h2>
             
-            <div className="form-group">
-              <label htmlFor="timerDuration">
-                Timer Duration (seconds)
-              </label>
-              <input
-                id="timerDuration"
-                type="range"
-                min="10"
-                max="120"
-                value={config.timerDuration}
-                onChange={(e) => setConfig({
-                  ...config,
-                  timerDuration: parseInt(e.target.value)
-                })}
-              />
-              <span className="timer-display">{config.timerDuration}s</span>
-            </div>
-
             <div className="form-group">
               <label htmlFor="maxParticipants">
                 Maximum Participants

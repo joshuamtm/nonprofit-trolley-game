@@ -26,6 +26,13 @@ export const mockScenarios = [
       "How do we balance serving more people versus ensuring we don't abandon the most vulnerable?",
       "What safeguards could protect irregular users while still leveraging AI benefits?"
     ],
+    mitigations: [
+      "Implement human review for all AI decisions affecting vulnerable populations",
+      "Create an appeals process for those excluded by AI recommendations",
+      "Maintain a dedicated team member to handle edge cases",
+      "Regular audits of AI decisions for bias patterns",
+      "Transparent communication about AI use in decision-making"
+    ],
     is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
@@ -54,6 +61,13 @@ export const mockScenarios = [
       "Is it ethical to use AI for mental health screening given the stakes?",
       "How do we weigh increased reach against the risk of errors in crisis detection?"
     ],
+    mitigations: [
+      "Mandatory human review for all crisis flags",
+      "Cultural competency training for AI models",
+      "Clear disclaimers that AI is not a replacement for professional help",
+      "Regular false positive/negative rate monitoring",
+      "Backup human counselor always available for escalation"
+    ],
     is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
@@ -81,6 +95,50 @@ export const mockScenarios = [
     discussion_prompts: [
       "Should nonprofits optimize for financial sustainability or community engagement?",
       "What are the long-term costs of alienating grassroots supporters?"
+    ],
+    mitigations: [
+      "Maintain separate engagement tracks for small and major donors",
+      "Set minimum percentage of outreach reserved for grassroots donors",
+      "Use AI insights to improve but not replace human relationship building",
+      "Regular review of donor diversity metrics",
+      "Transparent communication about how donor data is used"
+    ],
+    is_active: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z"
+  },
+  {
+    id: "c3d4e5f6-a7b8-9012-cdef-f34567890123",
+    title: "Environmental Impact of Grant Writing AI",
+    context: "Your nonprofit needs to submit 50 grant applications this year to maintain funding. Using AI tools for grant writing could increase your success rate from 20% to 35%, potentially securing an additional $750,000 in funding that would help 1,500 more beneficiaries. However, each AI-assisted grant application generates approximately 10-20 kg of CO2 emissions (equivalent to driving 50-100 miles), totaling 500-1,000 kg of CO2 annually. Your organization has committed to carbon neutrality and environmental justice, serving communities already disproportionately affected by climate change.",
+    ai_option: "Pull the lever: Use AI for grant writing to secure $750,000 more funding and help 1,500 additional people, accepting the carbon footprint of 500-1,000 kg CO2 annually.",
+    non_ai_option: "Don't pull: Continue manual grant writing with lower success rates but maintain your carbon-neutral commitment to communities affected by climate change.",
+    assumptions: [
+      "ChatGPT uses 2.9 watt-hours per query vs 0.3 for a Google search",
+      "Average grant application requires 100-200 AI queries for drafting and revision",
+      "US electricity grid is 60% fossil fuels, making each query contribute to emissions",
+      "Additional funding would provide critical services to climate-vulnerable populations"
+    ],
+    ethical_axes: ["environmental_justice", "sustainability", "effectiveness"],
+    risk_notes: "Using AI while serving climate-affected communities creates ethical tension between immediate help and long-term environmental harm.",
+    metrics: {
+      benefit_estimate: "+$750,000 funding, +1,500 beneficiaries served",
+      environmental_cost: "500-1,000 kg CO2/year (equivalent to 2,500-5,000 miles driven)",
+      success_rate_change: "20% to 35% grant success rate"
+    },
+    content_warnings: ["climate_change"],
+    difficulty_level: "advanced" as const,
+    discussion_prompts: [
+      "How do we balance immediate community needs against long-term environmental impact?",
+      "Is it hypocritical to use high-carbon tools while serving climate-affected communities?",
+      "What level of environmental impact is acceptable for increased social good?"
+    ],
+    mitigations: [
+      "Purchase verified carbon offsets for all AI usage",
+      "Use AI only for highest-value grant applications",
+      "Run AI queries during off-peak hours when renewable energy is more available",
+      "Choose more efficient AI models when possible",
+      "Batch queries to reduce redundant processing"
     ],
     is_active: true,
     created_at: "2024-01-01T00:00:00Z",
@@ -160,7 +218,7 @@ export class MockRoomService {
     };
   }
   
-  static async submitVote(sessionId: string, participantId: string, scenarioId: string, vote: string, rationale?: string) {
+  static async submitVote(sessionId: string, participantId: string, scenarioId: string, vote: string, rationale?: string, mitigation?: string) {
     const voteId = `vote-${Date.now()}-${Math.random()}`;
     const voteData = {
       id: voteId,

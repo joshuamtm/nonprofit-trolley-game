@@ -35,10 +35,10 @@ export interface GameState {
   error: string | null;
   showResults: boolean;
   
-  // Word cloud data
-  wordClouds: {
-    pull: Array<{ text: string; count: number; size: number }>;
-    dont_pull: Array<{ text: string; count: number; size: number }>;
+  // Rationales data
+  rationales: {
+    pull: string[];
+    dont_pull: string[];
   };
 }
 
@@ -49,7 +49,7 @@ export interface GameActions {
   leaveRoom: () => Promise<void>;
   
   // Voting actions
-  submitVote: (vote: 'pull' | 'dont_pull', rationale?: string) => Promise<void>;
+  submitVote: (vote: 'pull' | 'dont_pull', rationale?: string, mitigation?: string) => Promise<void>;
   
   // Scenario actions
   startScenario: (scenarioId: string) => Promise<void>;
@@ -62,7 +62,7 @@ export interface GameActions {
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
   updateVoteSummary: (summary: any) => void;
-  updateWordClouds: (clouds: any) => void;
+  updateRationales: (rationales: any) => void;
   reset: () => void;
 }
 
@@ -80,7 +80,7 @@ const initialState: GameState = {
   loading: false,
   error: null,
   showResults: false,
-  wordClouds: {
+  rationales: {
     pull: [],
     dont_pull: [],
   },
@@ -209,7 +209,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set(initialState);
   },
 
-  submitVote: async (vote: 'pull' | 'dont_pull', rationale = '') => {
+  submitVote: async (vote: 'pull' | 'dont_pull', rationale = '', mitigation = '') => {
     const { session, participant, currentScenario } = get();
     
     if (!session || !participant || !currentScenario) {
@@ -226,8 +226,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     
     try {
       const { error } = isDemo 
-        ? await MockRoomService.submitVote(session.id, participant.id, currentScenario.id, vote, rationale)
-        : await RoomService.submitVote(session.id, participant.id, currentScenario.id, vote, rationale);
+        ? await MockRoomService.submitVote(session.id, participant.id, currentScenario.id, vote, rationale, mitigation)
+        : await RoomService.submitVote(session.id, participant.id, currentScenario.id, vote, rationale, mitigation);
       
       if (error) throw error;
       
@@ -269,7 +269,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         myRationale: '',
         voteSummary: null,
         showResults: false,
-        wordClouds: { pull: [], dont_pull: [] },
+        rationales: { pull: [], dont_pull: [] },
       });
       
     } catch (error: any) {
@@ -321,8 +321,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ voteSummary: summary });
   },
 
-  updateWordClouds: (clouds: any) => {
-    set({ wordClouds: clouds });
+  updateRationales: (rationales: any) => {
+    set({ rationales: rationales });
   },
 
   reset: () => {

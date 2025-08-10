@@ -80,6 +80,7 @@ export type Database = {
           content_warnings: string[];
           difficulty_level: 'beginner' | 'intermediate' | 'advanced';
           discussion_prompts: string[];
+          mitigations?: string[];
           is_active: boolean;
           created_at: string;
           updated_at: string;

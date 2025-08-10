@@ -9,10 +9,9 @@ interface FacilitatorDashboardProps {
   onNextScenario: () => void;
   gamePhase: 'waiting' | 'voting' | 'results';
   currentScenarioIndex: number;
+  currentScenario?: any;
   participantCount?: number;
   mockVotes: Array<{vote: 'pull' | 'dont_pull', rationale: string}>;
-  timerDuration?: number;
-  onTimerDurationChange?: (duration: number) => void;
 }
 
 const FacilitatorDashboard: React.FC<FacilitatorDashboardProps> = ({
@@ -21,31 +20,21 @@ const FacilitatorDashboard: React.FC<FacilitatorDashboardProps> = ({
   onNextScenario,
   gamePhase,
   currentScenarioIndex,
+  currentScenario: propScenario,
   participantCount = 0,
   mockVotes,
-  timerDuration = 30,
-  onTimerDurationChange
 }) => {
   const [showScenarioPreview, setShowScenarioPreview] = useState(false);
-  const [customTimer, setCustomTimer] = useState(timerDuration);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedScenarios, setSelectedScenarios] = useState<number[]>([]);
 
-  const currentScenario = mockScenarios[currentScenarioIndex];
+  const currentScenario = propScenario || mockScenarios[currentScenarioIndex];
   const isLastScenario = currentScenarioIndex >= mockScenarios.length - 1;
 
   const pullVotes = mockVotes.filter(v => v.vote === 'pull').length;
   const dontPullVotes = mockVotes.filter(v => v.vote === 'dont_pull').length;
   const totalVotes = mockVotes.length;
 
-  useEffect(() => {
-    setCustomTimer(timerDuration);
-  }, [timerDuration]);
-
-  const handleTimerChange = (newDuration: number) => {
-    setCustomTimer(newDuration);
-    onTimerDurationChange?.(newDuration);
-  };
 
   const handleExportSession = (format: 'csv' | 'json' | 'pdf') => {
     // Simulate export functionality
@@ -117,28 +106,18 @@ const FacilitatorDashboard: React.FC<FacilitatorDashboardProps> = ({
           </div>
         </div>
 
-        {/* Timer Controls */}
-        <div className="dashboard-card timer-controls">
-          <h3>Timer Settings</h3>
-          <div className="timer-setup">
-            <label htmlFor="timer-duration">Duration (seconds):</label>
-            <input
-              id="timer-duration"
-              type="range"
-              min="10"
-              max="120"
-              value={customTimer}
-              onChange={(e) => handleTimerChange(parseInt(e.target.value))}
-              disabled={gamePhase === 'voting'}
-            />
-            <span className="timer-value">{customTimer}s</span>
+        {/* Timer Display */}
+        <div className="dashboard-card timer-display">
+          <h3>Timer</h3>
+          <div className="timer-info">
+            <p>All scenarios: 30 seconds</p>
           </div>
           
           {gamePhase === 'voting' && (
             <div className="active-timer">
               <CountdownCircleTimer
                 isPlaying={true}
-                duration={timerDuration}
+                duration={30}
                 colors={['#2ecc71', '#f39c12', '#e74c3c']}
                 colorsTime={[20, 10, 0]}
                 size={60}

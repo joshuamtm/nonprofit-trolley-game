@@ -8,7 +8,7 @@ const HomePage: React.FC = () => {
       <header className="hero-section">
         <h1>Nonprofit Trolley Game</h1>
         <p className="tagline">
-          Explore AI ethics in social services through interactive scenarios
+          Explore AI ethics in nonprofits through interactive scenarios
         </p>
         <p className="description">
           A real-time multiplayer game designed to facilitate meaningful discussions 

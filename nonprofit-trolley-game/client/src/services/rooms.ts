@@ -162,7 +162,8 @@ export class RoomService {
     participantId: string,
     scenarioId: string,
     vote: 'pull' | 'dont_pull',
-    rationale?: string
+    rationale?: string,
+    mitigation?: string
   ) {
     const startTime = Date.now();
     
@@ -195,6 +196,23 @@ export class RoomService {
 
         if (rationaleError) throw rationaleError;
       }
+      
+      // Submit mitigation if provided
+      if (mitigation && mitigation.trim()) {
+        const { error: mitigationError } = await supabase
+          .from('mitigations')
+          .insert({
+            vote_id: voteData.id,
+            original_text: mitigation.trim(),
+            processed_text: mitigation.trim().toLowerCase(),
+            word_count: mitigation.trim().split(/\s+/).length,
+          });
+
+        if (mitigationError) {
+          // If mitigations table doesn't exist, we can still continue
+          console.warn('Could not save mitigation:', mitigationError);
+        }
+      }
 
       return { data: voteData, error: null };
     } catch (error) {
@@ -215,6 +233,81 @@ export class RoomService {
       return { data, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
+    }
+  }
+
+  static async getRationales(sessionId: string, scenarioId: string) {
+    try {
+      // Get all votes for this session and scenario
+      const { data: votes, error: votesError } = await supabase
+        .from('votes')
+        .select('id, vote')
+        .eq('session_id', sessionId)
+        .eq('scenario_id', scenarioId);
+
+      if (votesError) throw votesError;
+      if (!votes || votes.length === 0) return { data: { pull: [], dont_pull: [] }, error: null };
+
+      // Get rationales for these votes
+      const voteIds = votes.map(v => v.id);
+      const { data: rationales, error: rationalesError } = await supabase
+        .from('rationales')
+        .select('vote_id, original_text')
+        .in('vote_id', voteIds);
+
+      if (rationalesError) throw rationalesError;
+
+      // Group rationales by vote type
+      const groupedRationales = {
+        pull: [] as string[],
+        dont_pull: [] as string[]
+      };
+
+      votes.forEach(vote => {
+        const voteRationales = rationales?.filter(r => r.vote_id === vote.id) || [];
+        const voteType = vote.vote === 'pull' ? 'pull' : 'dont_pull';
+        voteRationales.forEach(r => {
+          if (r.original_text) {
+            groupedRationales[voteType].push(r.original_text);
+          }
+        });
+      });
+
+      return { data: groupedRationales, error: null };
+    } catch (error) {
+      return { data: { pull: [], dont_pull: [] }, error: error as Error };
+    }
+  }
+
+  static async getMitigations(sessionId: string, scenarioId: string) {
+    try {
+      // Get all votes for this session and scenario
+      const { data: votes, error: votesError } = await supabase
+        .from('votes')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('scenario_id', scenarioId);
+
+      if (votesError) throw votesError;
+      if (!votes || votes.length === 0) return { data: [], error: null };
+
+      // Get mitigations for these votes
+      const voteIds = votes.map(v => v.id);
+      const { data: mitigations, error: mitigationsError } = await supabase
+        .from('mitigations')
+        .select('original_text')
+        .in('vote_id', voteIds);
+
+      if (mitigationsError) {
+        console.warn('Mitigations table not found:', mitigationsError);
+        return { data: [], error: null };
+      }
+
+      // Return array of mitigation texts
+      const mitigationTexts = mitigations?.map(m => m.original_text) || [];
+      return { data: mitigationTexts, error: null };
+    } catch (error) {
+      return { data: [], error: error as Error };
     }
   }
 

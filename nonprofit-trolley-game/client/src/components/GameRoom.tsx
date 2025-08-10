@@ -4,9 +4,9 @@ import { useGameStore } from '../stores/gameStore';
 import { mockScenarios, MockRoomService, isMockMode } from '../services/mockData';
 import { RoomService } from '../services/rooms';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
-import WordCloud from './WordCloud';
+import Quotes from './Quotes';
 import FacilitatorDashboard from './FacilitatorDashboard';
-import { moderateText, calculateStemmedWordFrequencies, rateLimiter } from '../utils/textProcessing';
+import { moderateText, rateLimiter } from '../utils/textProcessing';
 import { useKeyboardNavigation, focusElement } from '../hooks/useKeyboardNavigation';
 import { useScreenReader } from '../hooks/useScreenReader';
 import './GameRoom.css';
@@ -30,29 +30,37 @@ const GameRoom: React.FC = () => {
     secondsRemaining,
     showResults,
     voteSummary,
+    rationales,
     submitVote,
     setError,
     joinRoom,
     startScenario,
-    startTimer
+    startTimer,
+    updateRationales
   } = useGameStore();
 
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
+  const [availableScenarios, setAvailableScenarios] = useState<any[]>([]);
   const [rationale, setRationale] = useState('');
+  const [pullRationales, setPullRationales] = useState<string[]>([]);
+  const [dontPullRationales, setDontPullRationales] = useState<string[]>([]);
   const [gamePhase, setGamePhase] = useState<'waiting' | 'voting' | 'results'>('waiting');
   const [mockVotes, setMockVotes] = useState<Array<{vote: 'pull' | 'dont_pull', rationale: string}>>([]);
   const [moderationMessage, setModerationMessage] = useState<string>('');
-  const [timerDuration, setTimerDuration] = useState(30);
+  const [selectedVote, setSelectedVote] = useState<'pull' | 'dont_pull' | null>(null);
+  const timerDuration = 30; // Fixed 30-second timer for all scenarios
   const [showFacilitatorView, setShowFacilitatorView] = useState(isFacilitator);
   const [selectedVoteIndex, setSelectedVoteIndex] = useState(0); // For keyboard navigation
   const [keyboardFocusMode, setKeyboardFocusMode] = useState(false);
+  const [mitigation, setMitigation] = useState('');
+  const [mitigations, setMitigations] = useState<string[]>([]);
   
   const gameRoomRef = useRef<HTMLDivElement>(null);
   const pullButtonRef = useRef<HTMLButtonElement>(null);
   const dontPullButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Use scenario from store, fallback to mock for demo mode
-  const scenario = currentScenario || (isMockMode ? mockScenarios[currentScenarioIndex] : null);
+  // Use scenario from store, fallback to mock for demo mode or available scenarios
+  const scenario = currentScenario || (isMockMode ? mockScenarios[currentScenarioIndex] : availableScenarios[currentScenarioIndex]);
 
   // Screen reader announcements
   const {
@@ -70,6 +78,15 @@ const GameRoom: React.FC = () => {
       // Join room if not already joined
       handleJoinRoom();
     }
+    // Load scenarios for non-mock mode
+    if (!isMockMode && availableScenarios.length === 0) {
+      RoomService.loadScenarios().then(({ data }) => {
+        if (data) {
+          setAvailableScenarios(data);
+          console.log('📚 Loaded scenarios:', data.map(s => s.title));
+        }
+      });
+    }
   }, [roomCode]);
 
   // Handle scenario loading and game phase transitions
@@ -78,11 +95,84 @@ const GameRoom: React.FC = () => {
       // If we have a scenario loaded and we're not in mock mode, 
       // it means the facilitator started a scenario, so transition to voting
       setGamePhase('voting');
+      // Reset voting state for new scenario
+      setSelectedVote(null);
+      setRationale('');
+      setMitigation('');
     } else if (!scenario && !isMockMode) {
       // If no scenario is loaded, we should be in waiting phase
       setGamePhase('waiting');
     }
   }, [scenario, isMockMode]);
+
+  // Monitor showResults from store to transition to results phase
+  useEffect(() => {
+    if (showResults && !isMockMode) {
+      console.log('📊 showResults is true, transitioning to results phase');
+      setGamePhase('results');
+    }
+  }, [showResults, isMockMode]);
+
+  // Monitor when scenario changes to ensure UI is reset
+  useEffect(() => {
+    if (currentScenario && !isMockMode) {
+      console.log('📄 Scenario changed:', currentScenario.title);
+      // Force re-render with new scenario
+      setGamePhase('voting');
+      setSelectedVote(null);
+      setRationale('');
+      setMitigation('');
+    }
+  }, [currentScenario?.id]);
+
+  // Start a local timer when voting phase begins (for participants)
+  useEffect(() => {
+    if (gamePhase === 'voting' && !isFacilitator && !isMockMode) {
+      console.log('🎯 Participant entering voting phase, starting local timer');
+      // Start a local countdown for participants
+      let countdown = timerDuration;
+      const localTimer = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(localTimer);
+          console.log('⏰ Local timer expired, transitioning to results');
+          setGamePhase('results');
+        }
+      }, 1000);
+      
+      return () => clearInterval(localTimer);
+    }
+  }, [gamePhase, isFacilitator, timerDuration]);
+
+  // Fetch rationales and mitigations when results phase begins
+  useEffect(() => {
+    if (gamePhase === 'results' && session && currentScenario && !isMockMode) {
+      console.log('📊 Fetching rationales and mitigations for quotes display');
+      
+      // Fetch rationales
+      RoomService.getRationales(session.id, currentScenario.id).then(({ data, error }) => {
+        if (data && !error) {
+          console.log('✅ Got rationales:', data);
+          // Update rationales for display as quotes
+          setPullRationales(data.pull);
+          setDontPullRationales(data.dont_pull);
+          updateRationales({ pull: data.pull, dont_pull: data.dont_pull });
+        } else {
+          console.error('Failed to fetch rationales:', error);
+        }
+      });
+      
+      // Fetch mitigations
+      RoomService.getMitigations(session.id, currentScenario.id).then(({ data, error }) => {
+        if (data && !error) {
+          console.log('✅ Got mitigations:', data);
+          setMitigations(data);
+        } else {
+          console.error('Failed to fetch mitigations:', error);
+        }
+      });
+    }
+  }, [gamePhase, session, currentScenario]);
 
   const handleJoinRoom = async () => {
     if (!roomCode) return;
@@ -116,22 +206,25 @@ const GameRoom: React.FC = () => {
       try {
         console.log('📡 Starting real scenario...', { session: session?.id });
         
-        // Load the first scenario if none is loaded
-        if (!scenario) {
+        // Load scenarios if not already loaded
+        if (availableScenarios.length === 0) {
           console.log('📚 Loading scenarios from database...');
           const { data: scenarios, error } = await RoomService.loadScenarios();
           if (scenarios && scenarios.length > 0) {
-            console.log('✅ Starting scenario:', scenarios[0].title);
-            await startScenario(scenarios[0].id);
+            setAvailableScenarios(scenarios);
+            console.log('✅ Starting scenario:', scenarios[currentScenarioIndex].title);
+            await startScenario(scenarios[currentScenarioIndex].id);
           }
         } else {
-          console.log('🎯 Starting existing scenario:', scenario.title);
-          await startScenario(scenario.id);
+          // Use already loaded scenarios
+          const scenarioToStart = availableScenarios[currentScenarioIndex];
+          console.log('🎯 Starting scenario:', scenarioToStart.title);
+          await startScenario(scenarioToStart.id);
         }
         
-        // Start the timer for real mode
-        console.log('⏰ Starting timer:', timerDuration, 'seconds');
-        startTimer(timerDuration);
+        // Start the timer for real mode (always 30 seconds)
+        console.log('⏰ Starting timer: 30 seconds');
+        startTimer(30);
         
         console.log('✅ Scenario start completed');
       } catch (error: any) {
@@ -141,8 +234,16 @@ const GameRoom: React.FC = () => {
     }
   };
 
-  const handleVote = async (vote: 'pull' | 'dont_pull') => {
+  const handleVoteSelection = (vote: 'pull' | 'dont_pull') => {
     if (hasVoted) return;
+    
+    // Always set the vote (no toggle behavior for better UX)
+    setSelectedVote(vote);
+    console.log('🗳️ Vote selected:', vote);
+  };
+
+  const handleVoteSubmit = async () => {
+    if (hasVoted || !selectedVote) return;
 
     // Check rate limiting
     const identifier = window.navigator.userAgent + window.location.href;
@@ -169,13 +270,14 @@ const GameRoom: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Add to mock votes for word cloud demonstration
-      setMockVotes(prev => [...prev, { vote, rationale: processedRationale || rationale.trim() }]);
+      setMockVotes(prev => [...prev, { vote: selectedVote, rationale: processedRationale || rationale.trim() }]);
       
       // Announce successful vote submission
-      announceVoteSubmitted(vote, processedRationale || rationale.trim());
+      announceVoteSubmitted(selectedVote, processedRationale || rationale.trim());
     } else {
-      await submitVote(vote, processedRationale);
-      announceVoteSubmitted(vote, processedRationale);
+      // Submit vote with mitigation to backend
+      await submitVote(selectedVote, processedRationale, mitigation.trim());
+      announceVoteSubmitted(selectedVote, processedRationale);
     }
 
     // Clear moderation message after 3 seconds
@@ -184,26 +286,68 @@ const GameRoom: React.FC = () => {
     }
   };
 
-  const handleNextScenario = () => {
-    if (currentScenarioIndex < mockScenarios.length - 1) {
-      setCurrentScenarioIndex(prev => prev + 1);
-      setGamePhase('waiting');
-      setRationale('');
-      setMockVotes([]); // Clear votes for new scenario
-      setModerationMessage('');
-      announceGamePhase('waiting', `Moving to scenario ${currentScenarioIndex + 2} of ${mockScenarios.length}.`);
+  const handleNextScenario = async () => {
+    if (isMockMode) {
+      if (currentScenarioIndex < mockScenarios.length - 1) {
+        setCurrentScenarioIndex(prev => prev + 1);
+        setGamePhase('waiting');
+        setRationale('');
+        setMitigation('');
+        setSelectedVote(null);
+        setMockVotes([]); // Clear votes for new scenario
+        setModerationMessage('');
+        announceGamePhase('waiting', `Moving to scenario ${currentScenarioIndex + 2} of ${mockScenarios.length}.`);
+      } else {
+        setGamePhase('waiting');
+        announceGamePhase('waiting', 'Game session complete. All scenarios have been finished.');
+      }
     } else {
-      setGamePhase('waiting');
-      announceGamePhase('waiting', 'Game session complete. All scenarios have been finished.');
+      // Real mode - load next scenario from database
+      try {
+        // Use cached scenarios or load them
+        let scenarios = availableScenarios;
+        if (scenarios.length === 0) {
+          const { data } = await RoomService.loadScenarios();
+          if (data) {
+            scenarios = data;
+            setAvailableScenarios(data);
+          }
+        }
+        
+        if (scenarios && scenarios.length > 0) {
+          // Move to next scenario index
+          const nextIndex = (currentScenarioIndex + 1) % scenarios.length;
+          setCurrentScenarioIndex(nextIndex);
+          
+          const nextScenario = scenarios[nextIndex];
+          console.log('📚 Moving to next scenario:', nextScenario.title, 'Index:', nextIndex);
+          
+          // Reset state for new scenario
+          setGamePhase('waiting');
+          setRationale('');
+          setMitigation('');
+          setSelectedVote(null);
+          setModerationMessage('');
+          
+          // Don't start the scenario yet - just reset to waiting state
+          // The facilitator will start it when ready
+          announceGamePhase('waiting', `Ready for next scenario: ${nextScenario.title}`);
+        }
+      } catch (error) {
+        console.error('Failed to load next scenario:', error);
+        setError('Failed to load next scenario');
+      }
     }
   };
 
-  // Calculate word cloud data for demo
-  const pullRationales = mockVotes.filter(v => v.vote === 'pull').map(v => v.rationale);
-  const dontPullRationales = mockVotes.filter(v => v.vote === 'dont_pull').map(v => v.rationale);
-  
-  const pullWords = calculateStemmedWordFrequencies(pullRationales);
-  const dontPullWords = calculateStemmedWordFrequencies(dontPullRationales);
+  // Use rationales data - use local state if available, otherwise use mock data
+  const displayPullRationales = pullRationales.length > 0 
+    ? pullRationales 
+    : mockVotes.filter(v => v.vote === 'pull').map(v => v.rationale);
+    
+  const displayDontPullRationales = dontPullRationales.length > 0
+    ? dontPullRationales
+    : mockVotes.filter(v => v.vote === 'dont_pull').map(v => v.rationale);
 
   // Keyboard navigation for voting phase
   useKeyboardNavigation({
@@ -224,18 +368,18 @@ const GameRoom: React.FC = () => {
     onEnter: () => {
       if (gamePhase === 'voting' && !hasVoted && keyboardFocusMode) {
         if (selectedVoteIndex === 0) {
-          handleVote('pull');
+          handleVoteSelection('pull');
         } else {
-          handleVote('dont_pull');
+          handleVoteSelection('dont_pull');
         }
       }
     },
     onSpace: () => {
       if (gamePhase === 'voting' && !hasVoted && keyboardFocusMode) {
         if (selectedVoteIndex === 0) {
-          handleVote('pull');
+          handleVoteSelection('pull');
         } else {
-          handleVote('dont_pull');
+          handleVoteSelection('dont_pull');
         }
       }
     },
@@ -307,10 +451,9 @@ const GameRoom: React.FC = () => {
         onNextScenario={handleNextScenario}
         gamePhase={gamePhase}
         currentScenarioIndex={currentScenarioIndex}
+        currentScenario={scenario}
         participantCount={3} // Mock participant count
         mockVotes={mockVotes}
-        timerDuration={timerDuration}
-        onTimerDurationChange={setTimerDuration}
       />
     );
   }
@@ -359,15 +502,18 @@ const GameRoom: React.FC = () => {
         {gamePhase === 'voting' && (
           <div className="timer-container" role="timer" aria-label="Voting countdown timer">
             <CountdownCircleTimer
-              isPlaying={timerActive}
+              key={`timer-${currentScenario?.id || currentScenarioIndex}`}
+              isPlaying={timerActive || (gamePhase === 'voting' && !isMockMode)}
               duration={timerDuration}
+              initialRemainingTime={secondsRemaining > 0 ? secondsRemaining : timerDuration}
               colors={['#2ecc71', '#f39c12', '#e74c3c']}
               colorsTime={[timerDuration * 0.67, timerDuration * 0.33, 0]}
               size={80}
               onComplete={() => {
-                console.log('⏰ Timer completed');
-                // Transition to results phase when timer completes
+                console.log('⏰ Timer completed - transitioning to results');
+                // Force transition to results phase when timer completes
                 setGamePhase('results');
+                // The store's startTimer function already sets showResults to true when timer completes
                 return { shouldRepeat: false, delay: 0 };
               }}
             >
@@ -437,11 +583,11 @@ const GameRoom: React.FC = () => {
                   
                   <button
                     ref={pullButtonRef}
-                    className={`vote-button pull-lever ${myVote === 'pull' ? 'selected' : ''}`}
-                    onClick={() => handleVote('pull')}
+                    className={`vote-button pull-lever ${selectedVote === 'pull' ? 'selected' : ''}`}
+                    onClick={() => handleVoteSelection('pull')}
                     disabled={hasVoted}
                     role="radio"
-                    aria-checked={myVote === 'pull'}
+                    aria-checked={selectedVote === 'pull'}
                     aria-describedby="pull-description"
                     aria-label="Pull lever to use AI option"
                     data-keyboard-focus={keyboardFocusMode && selectedVoteIndex === 0}
@@ -453,11 +599,11 @@ const GameRoom: React.FC = () => {
 
                   <button
                     ref={dontPullButtonRef}
-                    className={`vote-button dont-pull ${myVote === 'dont_pull' ? 'selected' : ''}`}
-                    onClick={() => handleVote('dont_pull')}
+                    className={`vote-button dont-pull ${selectedVote === 'dont_pull' ? 'selected' : ''}`}
+                    onClick={() => handleVoteSelection('dont_pull')}
                     disabled={hasVoted}
                     role="radio"
-                    aria-checked={myVote === 'dont_pull'}
+                    aria-checked={selectedVote === 'dont_pull'}
                     aria-describedby="dont-pull-description"
                     aria-label="Don't pull lever to use human option"
                     data-keyboard-focus={keyboardFocusMode && selectedVoteIndex === 1}
@@ -468,36 +614,87 @@ const GameRoom: React.FC = () => {
                   </button>
                 </fieldset>
 
-                {!hasVoted && (
+                {selectedVote && !hasVoted && (
                   <div className="rationale-input" role="region" aria-labelledby="rationale-heading">
-                    <label htmlFor="rationale" id="rationale-heading">
-                      Why? (optional, max 80 characters)
-                    </label>
-                    <input
-                      id="rationale"
-                      type="text"
-                      value={rationale}
-                      onChange={(e) => {
-                        console.log('🖊️ Rationale input changed:', e.target.value);
-                        setRationale(e.target.value);
-                      }}
-                      maxLength={80}
-                      placeholder="Brief explanation of your choice..."
-                      aria-describedby="char-count rationale-help"
-                      autoComplete="off"
-                    />
-                    <div id="rationale-help" className="sr-only">
-                      Enter a brief explanation for your voting choice. This is optional and will be used anonymously in the word cloud.
+                    <div className="input-group">
+                      <label htmlFor="rationale" id="rationale-heading">
+                        Why? (optional, max 80 characters)
+                      </label>
+                      <input
+                        id="rationale"
+                        type="text"
+                        value={rationale}
+                        onChange={(e) => {
+                          console.log('🖊️ Rationale input changed:', e.target.value);
+                          // Preserve spaces in the input
+                          const newValue = e.target.value;
+                          setRationale(newValue);
+                        }}
+                        onKeyDown={(e) => {
+                          // Prevent any key filtering that might block spaces
+                          if (e.key === ' ') {
+                            e.stopPropagation();
+                          }
+                        }}
+                        maxLength={80}
+                        placeholder="Brief explanation of your choice..."
+                        aria-describedby="char-count rationale-help"
+                        autoComplete="off"
+                      />
+                      <div id="rationale-help" className="sr-only">
+                        Enter a brief explanation for your voting choice. This is optional and will be used anonymously in the word cloud.
+                      </div>
+                      <div className="char-count" id="char-count" aria-live="polite">
+                        {rationale.length}/80
+                        <span className="sr-only"> characters used</span>
+                      </div>
                     </div>
-                    <div className="char-count" id="char-count" aria-live="polite">
-                      {rationale.length}/80
-                      <span className="sr-only"> characters used</span>
+                    
+                    <div className="input-group">
+                      <label htmlFor="mitigation" id="mitigation-heading">
+                        {selectedVote === 'pull' ? 'How could AI risks be managed?' : 'Any suggestions?'} (optional, max 80 characters)
+                      </label>
+                      <input
+                        id="mitigation"
+                        type="text"
+                        value={mitigation}
+                        onChange={(e) => {
+                          console.log('🛡️ Mitigation input changed:', e.target.value);
+                          const newValue = e.target.value;
+                          setMitigation(newValue);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === ' ') {
+                            e.stopPropagation();
+                          }
+                        }}
+                        maxLength={80}
+                        placeholder={selectedVote === 'pull' ? 'Risk mitigation strategies...' : 'Your suggestions...'}
+                        aria-describedby="mitigation-char-count mitigation-help"
+                        autoComplete="off"
+                      />
+                      <div id="mitigation-help" className="sr-only">
+                        Enter suggestions for managing risks or alternative approaches.
+                      </div>
+                      <div className="char-count" id="mitigation-char-count" aria-live="polite">
+                        {mitigation.length}/80
+                        <span className="sr-only"> characters used</span>
+                      </div>
                     </div>
+                    
                     {moderationMessage && (
                       <div className="moderation-message" role="alert" aria-live="assertive">
                         ⚠️ {moderationMessage}
                       </div>
                     )}
+                    <button
+                      className="submit-vote-button"
+                      onClick={handleVoteSubmit}
+                      disabled={!selectedVote}
+                      aria-label="Submit your vote with optional rationale and suggestions"
+                    >
+                      Submit Vote
+                    </button>
                   </div>
                 )}
 
@@ -513,61 +710,146 @@ const GameRoom: React.FC = () => {
                 )}
               </div>
 
-              <aside className="word-clouds-container" role="complementary" aria-labelledby="live-reasoning-heading">
-                <h3 id="live-reasoning-heading">Live Reasoning</h3>
-                <div className="cloud-container">
-                  <section className="cloud-section" aria-labelledby="pull-cloud-heading">
-                    <h4 id="pull-cloud-heading" className="pull-title">Pull Lever</h4>
-                    <WordCloud 
-                      words={pullWords}
-                      width={280}
-                      height={180}
+              <aside className="quotes-container-wrapper" role="complementary" aria-labelledby="live-reasoning-heading">
+                <h3 id="live-reasoning-heading">Live Participant Views</h3>
+                <div className="quotes-split">
+                  <section className="quotes-section" aria-labelledby="pull-quotes-heading">
+                    <h4 id="pull-quotes-heading" className="pull-title">With AI</h4>
+                    <Quotes 
+                      quotes={displayPullRationales}
                       type="pull"
-                      className="word-cloud-component"
+                      maxQuotes={3}
                     />
                   </section>
                   
-                  <section className="cloud-section" aria-labelledby="dont-pull-cloud-heading">
-                    <h4 id="dont-pull-cloud-heading" className="dont-pull-title">Don't Pull</h4>
-                    <WordCloud 
-                      words={dontPullWords}
-                      width={280}
-                      height={180}
+                  <section className="quotes-section" aria-labelledby="dont-pull-quotes-heading">
+                    <h4 id="dont-pull-quotes-heading" className="dont-pull-title">Without AI</h4>
+                    <Quotes 
+                      quotes={displayDontPullRationales}
                       type="dont_pull"
-                      className="word-cloud-component"
+                      maxQuotes={3}
                     />
                   </section>
                 </div>
               </aside>
             </div>
           </section>
-        ) : (
+        ) : gamePhase === 'results' ? (
           <section className="results-phase" aria-labelledby="results-heading">
             <h2 id="results-heading">Results</h2>
             <div className="results-summary" role="region" aria-labelledby="results-heading">
               <div className="vote-tally" role="table" aria-label="Vote count results">
                 <div className="tally-item pull" role="cell">
-                  <span className="count" aria-label="3 votes">3</span>
+                  <span className="count" aria-label={`${voteSummary?.pull_votes || mockVotes.filter(v => v.vote === 'pull').length} votes`}>
+                    {voteSummary?.pull_votes || mockVotes.filter(v => v.vote === 'pull').length}
+                  </span>
                   <span className="label">Pull Lever</span>
                 </div>
                 <div className="tally-item dont-pull" role="cell">
-                  <span className="count" aria-label="2 votes">2</span>
+                  <span className="count" aria-label={`${voteSummary?.dont_pull_votes || mockVotes.filter(v => v.vote === 'dont_pull').length} votes`}>
+                    {voteSummary?.dont_pull_votes || mockVotes.filter(v => v.vote === 'dont_pull').length}
+                  </span>
                   <span className="label">Don't Pull</span>
                 </div>
               </div>
               
               <div className="decision" role="status" aria-live="polite">
-                <h3>The group chose to <strong>Pull the Lever</strong></h3>
-                <p>The trolley goes to the AI track</p>
+                {(() => {
+                  const pullCount = voteSummary?.pull_votes || mockVotes.filter(v => v.vote === 'pull').length;
+                  const dontPullCount = voteSummary?.dont_pull_votes || mockVotes.filter(v => v.vote === 'dont_pull').length;
+                  const decision = pullCount > dontPullCount ? 'Pull the Lever' : pullCount < dontPullCount ? "Don't Pull" : 'Tie';
+                  const track = pullCount > dontPullCount ? 'With AI' : pullCount < dontPullCount ? 'Without AI' : 'neither';
+                  
+                  return (
+                    <>
+                      <h3>The group chose to <strong>{decision}</strong></h3>
+                      {track !== 'neither' ? (
+                        <p>The trolley goes to the {track} track</p>
+                      ) : (
+                        <p>The vote ended in a tie</p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="trolley-animation" role="img" aria-label="Animated trolley moving to the chosen track">
-                <div className="trolley" aria-hidden="true">🚂</div>
-                <div className="tracks" role="presentation">
-                  <div className="track ai-track active" aria-label="AI Track - chosen path">AI Track</div>
-                  <div className="track human-track" aria-label="Human Track - not chosen">Human Track</div>
+                {(() => {
+                  const pullCount = voteSummary?.pull_votes || mockVotes.filter(v => v.vote === 'pull').length;
+                  const dontPullCount = voteSummary?.dont_pull_votes || mockVotes.filter(v => v.vote === 'dont_pull').length;
+                  const winner = pullCount > dontPullCount ? 'pull' : pullCount < dontPullCount ? 'dont_pull' : 'tie';
+                  
+                  return (
+                    <>
+                      <div className="track-junction">
+                        <div className="track-line main-track"></div>
+                        <div className="track-line left-track"></div>
+                        <div className="track-line right-track"></div>
+                        <div className={`trolley trolley-${winner}`} aria-hidden="true">
+                          {winner === 'dont_pull' ? '🚃' : '🚂'}
+                        </div>
+                      </div>
+                      <div className="tracks" role="presentation">
+                        <div className={`track ai-track ${winner === 'pull' ? 'active chosen' : 'inactive'}`} aria-label={winner === 'pull' ? "With AI Track - chosen path" : "With AI Track - not chosen"}>
+                          <span className="track-icon">🤖</span>
+                          <span className="track-label">With AI</span>
+                          {winner === 'pull' && <span className="track-status">✓ Selected</span>}
+                        </div>
+                        <div className={`track human-track ${winner === 'dont_pull' ? 'active chosen' : 'inactive'}`} aria-label={winner === 'dont_pull' ? "Without AI Track - chosen path" : "Without AI Track - not chosen"}>
+                          <span className="track-icon">👥</span>
+                          <span className="track-label">Without AI</span>
+                          {winner === 'dont_pull' && <span className="track-status">✓ Selected</span>}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Quotes for results phase */}
+              <div className="results-quotes" role="region" aria-labelledby="results-rationales-heading">
+                <h3 id="results-rationales-heading">Why Participants Voted This Way</h3>
+                <div className="quotes-display three-columns">
+                  <section className="quotes-column" aria-labelledby="pull-results-quotes">
+                    <h4 id="pull-results-quotes" className="pull-title">With AI</h4>
+                    <Quotes 
+                      quotes={displayPullRationales}
+                      type="pull"
+                      maxQuotes={5}
+                    />
+                  </section>
+                  
+                  <section className="quotes-column" aria-labelledby="dont-pull-results-quotes">
+                    <h4 id="dont-pull-results-quotes" className="dont-pull-title">Without AI</h4>
+                    <Quotes 
+                      quotes={displayDontPullRationales}
+                      type="dont_pull"
+                      maxQuotes={5}
+                    />
+                  </section>
+                  
+                  <section className="quotes-column" aria-labelledby="mitigations-results-quotes">
+                    <h4 id="mitigations-results-quotes" className="mitigations-title">Risk Mitigation Ideas</h4>
+                    <Quotes 
+                      quotes={mitigations}
+                      type="mitigations"
+                      maxQuotes={5}
+                    />
+                  </section>
                 </div>
               </div>
+              
+              {/* Mitigations section */}
+              {scenario?.mitigations && scenario.mitigations.length > 0 && (
+                <div className="mitigations-section" role="region" aria-labelledby="mitigations-heading">
+                  <h3 id="mitigations-heading">If Choosing AI: Risk Mitigation Strategies</h3>
+                  <ul className="mitigations-list">
+                    {scenario.mitigations.map((mitigation, index) => (
+                      <li key={index} className="mitigation-item">{mitigation}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {isFacilitator && (
@@ -577,10 +859,13 @@ const GameRoom: React.FC = () => {
                   onClick={handleNextScenario}
                   aria-describedby="next-action-desc"
                 >
-                  {currentScenarioIndex < mockScenarios.length - 1 ? 'Next Scenario' : 'End Game'}
+                  {isMockMode 
+                    ? (currentScenarioIndex < mockScenarios.length - 1 ? 'Next Scenario' : 'End Game')
+                    : 'Next Scenario'
+                  }
                 </button>
                 <div id="next-action-desc" className="sr-only">
-                  {currentScenarioIndex < mockScenarios.length - 1 
+                  {isMockMode && currentScenarioIndex < mockScenarios.length - 1 
                     ? 'Proceed to the next scenario in the game'
                     : 'End the current game session'
                   }
@@ -588,7 +873,7 @@ const GameRoom: React.FC = () => {
               </nav>
             )}
           </section>
-        )}
+        ) : null}
       </main>
     </div>
   );
